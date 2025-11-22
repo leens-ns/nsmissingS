@@ -732,7 +732,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
 
   <script>
-    // Firebase 설정
+    document.addEventListener("DOMContentLoaded", function() {
+      // Firebase 설정
     const firebaseConfig = {
       apiKey: "AIzaSyC2Di2seSL1SY4PghoVlY5aqGMkEwhaPgA",
       authDomain: "nsmissingt.firebaseapp.com",
@@ -1505,6 +1506,7 @@
 
     // 초기 렌더링 (빈 목록 상태)
     renderItems();
+    });
   </script>
 </body>
 </html>
