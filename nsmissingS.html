@@ -2,106 +2,172 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>남성초등학교 분실물 센터 - 학생용</title>
+  <title>남성초등학교 분실물 센터 (학생용)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * { box-sizing: border-box; }
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      background: #f3f5fb;
-      color: #333;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      padding: 16px;
     }
     .page {
       max-width: 960px;
       margin: 0 auto;
-      padding: 16px;
     }
     header {
-      text-align: center;
       margin-bottom: 16px;
     }
-    .header-logo {
-      max-width: 180px;
-      height: auto;
-      margin-bottom: 8px;
-    }
     header h1 {
-      margin: 4px 0 2px;
-      font-size: 1.6rem;
+      font-size: 1.4rem;
       font-weight: 700;
-      color: #2563eb;
+      margin-bottom: 4px;
     }
     header p {
-      margin: 0;
       font-size: 0.9rem;
-      color: #64748b;
+      color: #6b7280;
     }
     .card {
       background: #ffffff;
       border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-      padding: 14px 16px;
-      margin-bottom: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+      border: 1px solid #e5e7eb;
     }
     .notice-box {
-      background:#fff7c2;
-      border-radius:8px;
-      padding:10px 12px;
-      border:1px solid #fde68a;
-      margin-bottom:10px;
-      font-size:0.85rem;
-      color:#6b7280;
+      background: #fff7c2;
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid #fde68a;
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+      color: #6b7280;
     }
     #itemsContainer {
-      display:flex;
-      flex-direction:column;
-      gap:10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     .item-card {
-      display:flex;
-      gap:10px;
-      padding:8px;
-      border-radius:10px;
-      border:1px solid #e5e7eb;
-      background:#ffffff;
+      display: flex;
+      gap: 10px;
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      cursor: pointer;
+      transition: box-shadow 0.15s ease, transform 0.1s ease;
+    }
+    .item-card:hover {
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+      transform: translateY(-1px);
     }
     .item-thumb {
-      width:90px;
-      height:90px;
-      border-radius:8px;
-      overflow:hidden;
-      flex-shrink:0;
-      background:#e5e7eb;
+      width: 90px;
+      height: 90px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #e5e7eb;
     }
     .item-thumb img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
     .item-body {
-      flex:1;
-      font-size:0.85rem;
+      flex: 1;
+      font-size: 0.85rem;
     }
     .item-title {
-      font-weight:600;
-      font-size:0.95rem;
-      margin-bottom:2px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 2px;
     }
     .item-meta {
-      color:#4b5563;
-      line-height:1.4;
+      color: #4b5563;
+      line-height: 1.4;
     }
     .item-footer {
-      margin-top:4px;
-      font-size:0.75rem;
-      color:#9ca3af;
+      margin-top: 4px;
+      font-size: 0.75rem;
+      color: #9ca3af;
     }
     .empty-message {
-      text-align:center;
-      padding:12px;
-      font-size:0.9rem;
-      color:#9ca3af;
+      text-align: center;
+      padding: 12px;
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+
+    /* 팝업 모달 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      width: 100%;
+      max-width: 420px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px rgba(15, 23, 42, 0.35);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .modal-header h3 {
+      font-size: 1rem;
+    }
+    .modal-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px;
+      color: #6b7280;
+    }
+    .modal-image {
+      width: 100%;
+      border-radius: 10px;
+      background: #e5e7eb;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .modal-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .modal-meta {
+      font-size: 0.85rem;
+      color: #4b5563;
+      line-height: 1.5;
+    }
+    .modal-meta div {
+      margin-bottom: 2px;
+    }
+    .modal-footer-text {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #6b7280;
     }
   </style>
 </head>
@@ -116,32 +182,73 @@
       <div class="notice-box">
         <p>※ 이 페이지에서는 분실물 조회만 가능합니다.</p>
         <p>※ 자신의 물건이 보이면, 표시된 보관 장소로 가서 선생님께 말씀하세요.</p>
+        <p>※ 카드를 누르면 사진과 정보를 크게 볼 수 있습니다.</p>
       </div>
       <div id="itemsContainer"></div>
-      <div id="emptyMessage" class="empty-message" style="display:none;">
+      <div
+        id="emptyMessage"
+        class="empty-message"
+        style="display:none;"
+      >
         현재 보관 중인 분실물이 없습니다.
       </div>
     </div>
   </div>
 
-  <!-- Firebase SDKs (Compat 버전) -->
+  <!-- 상세 팝업 -->
+  <div class="modal-backdrop" id="studentModalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="studentModalTitle">분실물 상세 보기</h3>
+        <button
+          class="modal-close"
+          id="studentModalCloseBtn"
+          aria-label="닫기"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="modal-image">
+        <img id="studentModalImage" alt="분실물 이미지" />
+      </div>
+      <div class="modal-meta" id="studentModalMeta"></div>
+      <div class="modal-footer-text">
+        이 물건이 내 것 같으면, 보관 장소로 가서 담당 선생님께 꼭
+        이야기하세요.
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
 
   <script>
+    // ===== Firebase 초기화 (교사용과 동일한 프로젝트로 설정) =====
     const firebaseConfig = {
-  apiKey: "AIzaSyDyp8MRjZUwZZxBMUZBDpCqYac2TaMIO5M",
-  authDomain: "nsmissingt-e9fbf.firebaseapp.com",
-  projectId: "nsmissingt-e9fbf",
-  storageBucket: "nsmissingt-e9fbf.firebasestorage.app",
-  messagingSenderId: "163980342864",
-  appId: "1:163980342864:web:e699b4d11af04752cd0355"
-};
+      apiKey: "AIzaSyDyp8MRjZUwZZxBMUZBDpCqYac2TaMIO5M",
+      authDomain: "nsmissingt-e9fbf.firebaseapp.com",
+      projectId: "nsmissingt-e9fbf",
+      storageBucket: "nsmissingt-e9fbf.firebasestorage.app",
+      messagingSenderId: "163980342864",
+      appId: "1:163980342864:web:e699b4d11af04752cd0355"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     const itemsContainer = document.getElementById("itemsContainer");
     const emptyMessage = document.getElementById("emptyMessage");
+
+    const modalBackdrop = document.getElementById(
+      "studentModalBackdrop"
+    );
+    const modalCloseBtn = document.getElementById(
+      "studentModalCloseBtn"
+    );
+    const modalTitle = document.getElementById("studentModalTitle");
+    const modalImage = document.getElementById("studentModalImage");
+    const modalMeta = document.getElementById("studentModalMeta");
+
     let items = [];
     let unsubscribe = null;
 
@@ -200,6 +307,7 @@
       items.forEach((item) => {
         const card = document.createElement("div");
         card.className = "item-card";
+        card.dataset.id = item.id;
 
         const thumb = document.createElement("div");
         thumb.className = "item-thumb";
@@ -221,13 +329,15 @@
           <div>카테고리: ${item.category || "-"}</div>
           <div>보관 장소: ${item.storageLocation || "-"}</div>
           <div>습득 장소: ${item.foundPlace || "-"}</div>
-          <div>습득 시간: ${formatDateTime(item.foundTime || item.createdAt)}</div>
-          <div>습득자: ${item.finderName || "-"}</div>
+          <div>습득 시간: ${formatDateTime(
+            item.foundTime || item.createdAt
+          )}</div>
         `;
 
         const footer = document.createElement("div");
         footer.className = "item-footer";
-        footer.textContent = "등록일: " + formatDateTime(item.createdAt);
+        footer.textContent =
+          "등록일: " + formatDateTime(item.createdAt);
 
         body.appendChild(titleEl);
         body.appendChild(meta);
@@ -235,10 +345,47 @@
 
         card.appendChild(thumb);
         card.appendChild(body);
+
+        card.addEventListener("click", () => openStudentModal(item.id));
+
         itemsContainer.appendChild(card);
       });
     }
 
+    function openStudentModal(itemId) {
+      const item = items.find((it) => it.id === itemId);
+      if (!item) return;
+      modalTitle.textContent = item.title || "분실물 상세 보기";
+      modalImage.src = item.imageUrl || "";
+      modalImage.alt = item.title || "분실물 이미지";
+      modalMeta.innerHTML = `
+        <div><strong>카테고리</strong> : ${item.category || "-"}</div>
+        <div><strong>보관 장소</strong> : ${
+          item.storageLocation || "-"
+        }</div>
+        <div><strong>습득 장소</strong> : ${
+          item.foundPlace || "-"
+        }</div>
+        <div><strong>습득 시간</strong> : ${formatDateTime(
+          item.foundTime || item.createdAt
+        )}</div>
+        <div><strong>등록일</strong> : ${formatDateTime(
+          item.createdAt
+        )}</div>
+      `;
+      modalBackdrop.style.display = "flex";
+    }
+
+    function closeStudentModal() {
+      modalBackdrop.style.display = "none";
+    }
+
+    modalCloseBtn.addEventListener("click", closeStudentModal);
+    modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === modalBackdrop) closeStudentModal();
+    });
+
+    // 처음 로딩 시 구독 시작
     subscribeItems();
   </script>
 </body>
