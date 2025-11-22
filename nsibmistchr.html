@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>남성초등학교 분실물 센터 - 교사용</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #f3f5fb;
+      color: #333;
+    }
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      padding: 16px 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header-logo {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 8px;
+    }
+    header h1 {
+      margin: 8px 0 4px;
+      font-size: 2rem;       /* 크게 */
+      font-weight: 700;
+      color: #2563eb;
+      white-space: nowrap;   /* 줄바꿈 방지 */
+      overflow: hidden;      /* 넘치는 부분 숨김 */
+      text-overflow: ellipsis; /* 너무 길면 ... 처리 */
+    }
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
+    /* 검색 영역 */
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .search-row input[type="text"] {
+      flex: 1 1 200px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid #cbd5f5;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .search-row input[type="text"]:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-outline { background: #e0edff; color: #1d4ed8; }
+    .btn:disabled { opacity: 0.6; cursor: default; }
+
+    .btn-register {
+      width: 100%;
+      margin-bottom: 12px;
+      font-weight: 600;
+      justify-content: center;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+    }
+
+    .btn-chip {
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #4b5563;
+      cursor: pointer;
+    }
+    .btn-chip-active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+
+    /* 특별 카테고리 색상 */
+    .btn-chip-found {
+      background: #ecfdf5;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+    .btn-chip-found.btn-chip-active {
+      background: #16a34a;
+      color: #ffffff;
+      border-color: #16a34a;
+    }
+    .btn-chip-discarded {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+    .btn-chip-discarded.btn-chip-active {
+      background: #ef4444;
+      color: #ffffff;
+      border-color: #ef4444;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: #ffffff;
+    }
+    .btn-disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: default;
+    }
+
+    .cat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #e0f2fe;
+      color: #0369a1;
+      margin-right: 4px;
+    }
+    .badge-status {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .section-title {
+      margin: 16px 0 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    /* 등록 폼 */
+    #teacherFormWrapper {
+      margin-top: 8px;
+      display: none; /* 기본은 접기 */
+    }
+    form {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #475569;
+      display: block;
+      margin-bottom: 4px;
+    }
+    input[type="text"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5f5;
+      font-size: 0.9rem;
+      outline: none;
+      resize: vertical;
+      min-height: 36px;
+      background: #f9fafb;
+    }
+    input[type="text"]:focus,
+    input[type="datetime-local"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #2563eb;
+      background: #ffffff;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+    }
+    input[type="file"] { font-size: 0.85rem; }
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .form-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    /* 분실물 목록 */
+    #itemsContainer {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .item-card {
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+    .item-card:hover {
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
+      transform: translateY(-1px);
+    }
+    .item-image-wrapper {
+      width: 100%;
+      padding-top: 60%;
+      position: relative;
+      overflow: hidden;
+      background: #e5e7eb;
+    }
+    .item-image-wrapper img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .item-body {
+      padding: 10px 12px 12px;
+      font-size: 0.85rem;
+    }
+    .item-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .item-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #0f172a;
+    }
+    .item-meta {
+      margin-top: 4px;
+      line-height: 1.4;
+      color: #4b5563;
+    }
+    .item-meta span { display: block; }
+    .item-footer {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .empty-message {
+      text-align: center;
+      padding: 16px;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+
+    /* 모달 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 840px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .modal-close {
+      border: none;
+      background: transparent;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    .modal-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .modal-image {
+      flex: 1;
+      max-height: 380px;
+      overflow: hidden;
+      background: #e5e7eb;
+      cursor: pointer; /* 사진 클릭 가능 */
+    }
+    .modal-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+    .modal-body {
+      padding: 12px 16px 16px;
+      font-size: 0.9rem;
+    }
+    .modal-body p {
+      margin: 4px 0;
+    }
+    .modal-meta {
+      margin-top: 4px;
+      line-height: 1.5;
+      color: #4b5563;
+    }
+    .modal-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    /* 기본: 모바일 — 버튼은 한 줄 전체 너비 */
+    .modal-buttons .btn {
+      flex: 1 1 100%;
+    }
+
+    .modal-note {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    /* 수정하기 버튼 (모달 하단 큰 버튼) */
+        .btn-edit {
+      margin-top: 8px;
+      width: 100%;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      justify-content: center;
+      background: #166534;  /* 짙은 초록색 */
+      color: #ffffff;
+    }
+    .btn-edit:hover {
+      background: #14532d;
+    }
+    .btn-edit:disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: default;
+    }
+    .btn-edit:disabled:hover {
+      background: #e5e7eb;
+      color: #9ca3af;
+    }
+
+    /* 재등록 버튼 */
+    .btn-reregister {
+      margin-top: 6px;
+      width: 100%;
+      padding: 9px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      justify-content: center;
+      background: #fef3c7;  /* 연노랑색 계열 */
+      color: #92400e;       /* 눈에 잘 띄는 진한 오렌지/갈색 */
+    }
+    .btn-reregister:hover {
+      background: #fde68a;  /* 살짝 진한 연노랑 */
+      color: #78350f;
+    }
+
+    /* 모달 내 input 간단 스타일 */
+    .modal-input {
+      width: auto;
+      min-width: 60%;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #cbd5f5;
+      font-size: 0.85rem;
+      background: #f9fafb;
+    }
+    .modal-input:focus {
+      border-color: #2563eb;
+      background: #ffffff;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+    }
+
+    @media (min-width: 768px) {
+      header h1 {
+        font-size: 2.4rem;  /* 큰 화면에서 더 크게 */
+      }
+      #itemsContainer {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .modal-content {
+        flex-direction: row;
+      }
+      .modal-image {
+        width: 45%;
+        max-height: none;
+      }
+      .modal-body {
+        width: 55%;
+      }
+      /* 태블릿 이상 — 버튼을 절반씩 나누기 */
+      .modal-buttons .btn {
+        flex: 1 1 calc(50% - 4px);
+      }
+    }
+    @media (min-width: 1024px) {
+      #itemsContainer {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <!-- 상단 로고 이미지 (경로는 서버 환경에 맞게 수정) -->
+      <img src="https://nisb.kr/plugins/custom_plugin/simple_page/assets/img/branding/logo4.png?date_ver=2025-11" alt="남성초등학교 로고" class="header-logo" />
+      <h1>남성초등학교 분실물 센터</h1>
+      <p>분실물을 한 눈에 확인하고, 잃어버린 물건을 찾아가세요!</p>
+    </header>
+
+    <div class="card">
+      <div class="search-row">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="분실물 검색 (종류, 장소, 설명 등)"
+        />
+        <button class="btn btn-primary" id="searchBtn">검색</button>
+      </div>
+
+      <!-- 큰 분실물 등록 버튼 -->
+      <button class="btn btn-primary btn-register" id="toggleFormBtn">
+        + 분실물 등록
+      </button>
+
+      <!-- 카테고리별 필터 버튼 -->
+      <div class="cat-row" id="categoryButtons">
+        <button class="btn-chip btn-chip-active" data-category="전체">전체</button>
+        <button class="btn-chip" data-category="의류/가방">의류/가방</button>
+        <button class="btn-chip" data-category="학용품">학용품</button>
+        <button class="btn-chip" data-category="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</button>
+        <button class="btn-chip" data-category="물병/텀블러">물병/텀블러</button>
+        <button class="btn-chip" data-category="열쇠/악세사리">열쇠/악세사리</button>
+        <button class="btn-chip" data-category="기타">기타</button>
+        <button class="btn-chip btn-chip-found" data-category="주인 찾음">주인 찾음</button>
+        <button class="btn-chip btn-chip-discarded" data-category="폐기 완료">폐기 완료</button>
+      </div>
+
+      <div id="teacherFormWrapper" class="card" style="margin-top: 8px; padding: 12px 14px;">
+        <div class="section-title">분실물 등록</div>
+        <small style="color:#64748b;">※ 이 영역은 교사만 사용해 주세요. (학생은 조회만)</small>
+
+        <form id="lostItemForm">
+          <div>
+            <label for="itemImage">분실물 사진 <span style="color:#dc2626;">*</span></label>
+            <input type="file" id="itemImage" accept="image/*" required />
+          </div>
+
+          <div>
+            <label for="itemTitle">분실물 이름 / 설명 <span style="color:#dc2626;">*</span></label>
+            <input
+              type="text"
+              id="itemTitle"
+              placeholder="예: 회색 후리스 집업, 검은색 텀블러"
+              required
+            />
+          </div>
+
+          <div class="form-row-2">
+            <div>
+              <label for="itemCategory">분실물 종류(카테고리)</label>
+              <select id="itemCategory">
+                <option value="기타">기타</option>
+                <option value="의류/가방">의류/가방</option>
+                <option value="학용품">학용품</option>
+                <option value="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</option>
+                <option value="물병/텀블러">물병/텀블러</option>
+                <option value="열쇠/악세사리">열쇠/악세사리</option>
+              </select>
+            </div>
+            <div>
+              <label for="storageLocation">보관 장소</label>
+              <select id="storageLocation">
+                <option value="교무실">교무실</option>
+                <option value="행정실">행정실</option>
+                <option value="보건실">보건실</option>
+                <option value="상담실">상담실</option>
+                <option value="가온누리 앞">가온누리 앞</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div>
+              <label for="foundPlace">습득 장소 <span style="color:#dc2626;">*</span></label>
+              <input
+                type="text"
+                id="foundPlace"
+                placeholder="예: 운동장, 4-1 교실, 강당"
+                required
+              />
+            </div>
+            <div>
+              <label for="foundTime">습득 시간 (선택, 미입력 시 자동)</label>
+              <input type="datetime-local" id="foundTime" />
+            </div>
+          </div>
+
+          <div>
+            <label for="finderName">습득자 성명 (선택)</label>
+            <input
+              type="text"
+              id="finderName"
+              placeholder="예: 4-1 홍길동 / 3학년 교사"
+            />
+          </div>
+
+          <div class="form-footer">
+            <button type="reset" class="btn">초기화</button>
+            <button type="submit" class="btn btn-primary">등록하기</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="section-title" style="margin-top:16px;">분실물 현황</div>
+      <div id="itemsContainer"></div>
+      <div id="emptyMessage" class="empty-message" style="display:none;">
+        아직 등록된 분실물이 없습니다. 교사가 분실물을 등록하면 이곳에 표시됩니다.
+      </div>
+      <button id="loadMoreBtn" class="btn btn-outline" style="margin:12px auto 0; display:none; width:100%;">
+        더 보기
+      </button>
+    </div>
+  </div>
+
+  <!-- 상세 모달 -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <!-- 제목: span + input 쌍 -->
+        <div style="flex:1;">
+          <div class="modal-title" id="modalTitle"></div>
+          <input
+            type="text"
+            id="modalTitleInput"
+            class="modal-input"
+            style="display:none; margin-top:4px; width:100%;"
+            placeholder="분실물 이름 / 설명"
+          />
+        </div>
+        <button class="modal-close" id="modalCloseBtn" aria-label="닫기">×</button>
+      </div>
+      <div class="modal-content">
+        <div class="modal-image" id="modalImageWrapper">
+          <img id="modalImage" alt="분실물 이미지" />
+        </div>
+        <div class="modal-body">
+          <div class="modal-meta">
+            <p>
+              <strong>카테고리:</strong>
+              <span id="modalCategory"></span>
+              <select id="modalCategoryInput" class="modal-input" style="display:none;">
+                <option value="기타">기타</option>
+                <option value="의류/가방">의류/가방</option>
+                <option value="학용품">학용품</option>
+                <option value="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</option>
+                <option value="물병/텀블러">물병/텀블러</option>
+                <option value="열쇠/악세사리">열쇠/악세사리</option>
+              </select>
+            </p>
+            <p>
+              <strong>보관 장소:</strong>
+              <span id="modalStorage"></span>
+              <select id="modalStorageInput" class="modal-input" style="display:none;">
+                <option value="교무실">교무실</option>
+                <option value="행정실">행정실</option>
+                <option value="보건실">보건실</option>
+                <option value="상담실">상담실</option>
+                <option value="가온누리 앞">가온누리 앞</option>
+              </select>
+            </p>
+            <p>
+              <strong>습득 장소:</strong>
+              <span id="modalFoundPlace"></span>
+              <input
+                type="text"
+                id="modalFoundPlaceInput"
+                class="modal-input"
+                style="display:none;"
+                placeholder="습득 장소"
+              />
+            </p>
+            <p>
+              <strong>습득 시간:</strong>
+              <span id="modalFoundTime"></span>
+              <input
+                type="datetime-local"
+                id="modalFoundTimeInput"
+                class="modal-input"
+                style="display:none;"
+              />
+            </p>
+            <p>
+              <strong>습득자:</strong>
+              <span id="modalFinder"></span>
+              <input
+                type="text"
+                id="modalFinderInput"
+                class="modal-input"
+                style="display:none;"
+                placeholder="습득자 성명"
+              />
+            </p>
+            <p><strong>등록일:</strong> <span id="modalCreatedAt"></span></p>
+            <p id="modalOwnerInfoRow" style="display:none;">
+              <strong>찾아간 학생:</strong>
+              <span id="modalOwnerInfo"></span>
+            </p>
+            <p><strong>상태:</strong> <span id="modalStatus"></span></p>
+          </div>
+
+          <div class="modal-buttons">
+            <button class="btn btn-primary" id="ownerDoneBtn">주인 찾기 완료</button>
+            <button class="btn btn-disabled" id="discardBtn">폐기 처리</button>
+          </div>
+          <p class="modal-note">※ 물건 보관 후 한 달이 지나면 물품을 폐기처리합니다.</p>
+          <p class="modal-note">※ 폐기 처리 버튼은 물품 등록일 기준 2주가 지나면 활성화됩니다.</p>
+
+          <!-- 수정하기 버튼 -->
+          <button class="btn btn-edit" id="editBtn">수정하기</button>
+          <!-- 재등록 버튼 (처음엔 숨김) -->
+          <button class="btn btn-outline btn-reregister" id="reRegisterBtn" style="display:none;">
+            재등록
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // ===================== Firebase 초기화 =====================
+const firebaseConfig = {
+  apiKey: "AIzaSyDyp8MRjZUwZZxBMUZBDpCqYac2TaMIO5M",
+  authDomain: "nsmissingt-e9fbf.firebaseapp.com",
+  projectId: "nsmissingt-e9fbf",
+  storageBucket: "nsmissingt-e9fbf.firebasestorage.app",
+  messagingSenderId: "163980342864",
+  appId: "1:163980342864:web:e699b4d11af04752cd0355"
+};
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      const auth = firebase.auth();
+
+      // ===================== imgbb 설정 =====================
+      const IMGBB_API_KEY = "b6eac487cb547bc827cef84b2fbbd7c7";
+
+      async function resizeImage(file, maxSize) {
+        return new Promise((resolve, reject) => {
+          if (!file) {
+            resolve(null);
+            return;
+          }
+          const img = new Image();
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            img.onload = () => {
+              let w = img.width;
+              let h = img.height;
+              if (!w || !h) {
+                resolve(file);
+                return;
+              }
+              if (w <= maxSize && h <= maxSize) {
+                resolve(file);
+                return;
+              }
+              let newW, newH;
+              if (w > h) {
+                newW = maxSize;
+                newH = Math.round(h * maxSize / w);
+              } else {
+                newH = maxSize;
+                newW = Math.round(w * maxSize / h);
+              }
+              const canvas = document.createElement("canvas");
+              canvas.width = newW;
+              canvas.height = newH;
+              const ctx = canvas.getContext("2d");
+              ctx.drawImage(img, 0, 0, newW, newH);
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  reject(new Error("이미지 리사이즈 중 오류가 발생했습니다."));
+                  return;
+                }
+                const resizedFile = new File([blob], file.name || "image.jpg", {
+                  type: blob.type || "image/jpeg"
+                });
+                resolve(resizedFile);
+              }, "image/jpeg", 0.7);
+            };
+            img.onerror = () => reject(new Error("이미지를 불러오지 못했습니다."));
+            img.src = e.target.result;
+          };
+          reader.onerror = () => reject(new Error("이미지를 읽지 못했습니다."));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadToImgBB(file) {
+        if (!file) return "";
+        const resized = await resizeImage(file, 600);
+        const formData = new FormData();
+        formData.append("image", resized);
+        const url = "https://api.imgbb.com/1/upload?key=" + encodeURIComponent(IMGBB_API_KEY);
+        const res = await fetch(url, { method: "POST", body: formData });
+        if (!res.ok) {
+          throw new Error("이미지 업로드에 실패했습니다.(네트워크 오류)");
+        }
+        const data = await res.json();
+        if (!data || !data.success) {
+          throw new Error("이미지 업로드에 실패했습니다.");
+        }
+        return data.data.url;
+      }
+
+      // ===================== 공통 유틸 =====================
+      function normalizeTs(value) {
+        if (!value) return "";
+        if (typeof value === "string") return value;
+        if (value.toDate) return value.toDate().toISOString();
+        return "";
+      }
+
+      function formatDateTime(isoString) {
+        if (!isoString) return "-";
+        const d = new Date(isoString);
+        if (Number.isNaN(d.getTime())) return "-";
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        return y + ". " + m + ". " + day + ". " + hh + ":" + mm;
+      }
+
+      function toLocalDateTimeInputValue(isoString) {
+        if (!isoString) return "";
+        const d = new Date(isoString);
+        if (Number.isNaN(d.getTime())) return "";
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        return y + "-" + m + "-" + day + "T" + hh + ":" + mm;
+      }
+
+      function canDiscard(item) {
+        if (item.status === "discarded") return false;
+        if (!item.createdAt) return false;
+        const created = new Date(item.createdAt);
+        if (Number.isNaN(created.getTime())) return false;
+        const now = new Date();
+        const diffDays = (now - created) / (1000 * 60 * 60 * 24);
+        return diffDays >= 14;
+      }
+
+      function statusLabel(item) {
+        if (item.status === "stored") return "보관 중";
+        if (item.status === "found") return "주인 찾음";
+        if (item.status === "discarded") return "폐기 완료";
+        return item.status || "상태 미정";
+      }
+
+      // ===================== DOM 요소 =====================
+      const itemsContainer      = document.getElementById("itemsContainer");
+      const emptyMessage        = document.getElementById("emptyMessage");
+      const searchInput         = document.getElementById("searchInput");
+      const searchBtn           = document.getElementById("searchBtn");
+      const toggleFormBtn       = document.getElementById("toggleFormBtn");
+      const teacherFormWrapper  = document.getElementById("teacherFormWrapper");
+      const lostItemForm        = document.getElementById("lostItemForm");
+      const categoryButtons     = document.querySelectorAll("#categoryButtons .btn-chip");
+      const loadMoreBtn        = document.getElementById("loadMoreBtn");
+
+      const imageInput          = document.getElementById("itemImage");
+      const titleInput          = document.getElementById("itemTitle");
+      const categorySelect      = document.getElementById("itemCategory");
+      const storageSelect       = document.getElementById("storageLocation");
+      const foundPlaceInput     = document.getElementById("foundPlace");
+      const foundTimeInput      = document.getElementById("foundTime");
+      const finderNameInput     = document.getElementById("finderName");
+
+      const detailModal         = document.getElementById("detailModal");
+      const modalCloseBtn       = document.getElementById("modalCloseBtn");
+      const modalTitle          = document.getElementById("modalTitle");
+      const modalTitleInput     = document.getElementById("modalTitleInput");
+      const modalImage          = document.getElementById("modalImage");
+      const modalImageWrapper   = document.getElementById("modalImageWrapper");
+      const modalCategory       = document.getElementById("modalCategory");
+      const modalCategoryInput  = document.getElementById("modalCategoryInput");
+      const modalStorage        = document.getElementById("modalStorage");
+      const modalStorageInput   = document.getElementById("modalStorageInput");
+      const modalFoundPlace     = document.getElementById("modalFoundPlace");
+      const modalFoundPlaceInput= document.getElementById("modalFoundPlaceInput");
+      const modalFoundTime      = document.getElementById("modalFoundTime");
+      const modalFoundTimeInput = document.getElementById("modalFoundTimeInput");
+      const modalFinder         = document.getElementById("modalFinder");
+      const modalFinderInput    = document.getElementById("modalFinderInput");
+      const modalCreatedAt      = document.getElementById("modalCreatedAt");
+      const modalStatus         = document.getElementById("modalStatus");
+      const modalOwnerInfoRow   = document.getElementById("modalOwnerInfoRow");
+      const modalOwnerInfo      = document.getElementById("modalOwnerInfo");
+      const ownerDoneBtn        = document.getElementById("ownerDoneBtn");
+      const discardBtn          = document.getElementById("discardBtn");
+      const editBtn             = document.getElementById("editBtn");
+      const reRegisterBtn       = document.getElementById("reRegisterBtn");
+
+      // ====== 상단 로그인/상태 영역 추가를 위해 동적으로 요소 삽입 ======
+      (function insertAuthRow() {
+        const card = document.querySelector(".card");
+        const searchRow = document.querySelector(".search-row");
+        if (!card || !searchRow) return;
+        const authRow = document.createElement("div");
+        authRow.className = "search-row";
+        authRow.style.marginBottom = "4px";
+
+        const authStatus = document.createElement("div");
+        authStatus.id = "authMessage";
+        authStatus.style.flex = "1";
+        authStatus.style.fontSize = "0.85rem";
+        authStatus.style.color = "#4b5563";
+        authStatus.textContent = "로그인하지 않은 상태입니다.";
+
+        const loginBtn = document.createElement("button");
+        loginBtn.id = "loginBtn";
+        loginBtn.className = "btn btn-outline";
+        loginBtn.textContent = "Google 로그인";
+
+        const logoutBtn = document.createElement("button");
+        logoutBtn.id = "logoutBtn";
+        logoutBtn.className = "btn";
+        logoutBtn.textContent = "로그아웃";
+        logoutBtn.style.display = "none";
+
+        authRow.appendChild(authStatus);
+        authRow.appendChild(loginBtn);
+        authRow.appendChild(logoutBtn);
+
+        card.insertBefore(authRow, searchRow);
+      })();
+
+      const authMessage = document.getElementById("authMessage");
+      const loginBtn    = document.getElementById("loginBtn");
+      const logoutBtn   = document.getElementById("logoutBtn");
+
+      let items = [];
+      let currentCategory = "전체";
+      let currentModalItemId = null;
+      let isEditMode = false;
+      let currentUser = null;
+      let isTeacher = false;
+      let lastVisible = null;
+      let isLoading = false;
+      const PAGE_SIZE = 5;
+
+      function updateAuthUI() {
+        const submitBtn = lostItemForm ? lostItemForm.querySelector('button[type="submit"]') : null;
+        if (isTeacher && currentUser) {
+          authMessage.innerHTML =
+            "<strong>" + currentUser.email + "</strong> (교사용 쓰기 권한)";
+          loginBtn.style.display = "none";
+          logoutBtn.style.display = "inline-flex";
+          if (submitBtn) submitBtn.disabled = false;
+        } else if (currentUser && !isTeacher) {
+          authMessage.innerHTML =
+            "<span style='color:#b91c1c; font-weight:500;'>" +
+            (currentUser.email || "") +
+            "</span><span> 계정은 쓰기 권한이 없습니다. (@nsworld.net 계정으로 다시 로그인해 주세요.)</span>";
+          loginBtn.style.display = "inline-flex";
+          logoutBtn.style.display = "inline-flex";
+          if (submitBtn) submitBtn.disabled = true;
+        } else {
+          authMessage.textContent = "로그인하지 않은 상태입니다.";
+          loginBtn.style.display = "inline-flex";
+          logoutBtn.style.display = "none";
+          if (submitBtn) submitBtn.disabled = true;
+        }
+      }
+
+      auth.onAuthStateChanged((user) => {
+        currentUser = user;
+        if (user && user.email && user.email.endsWith("@nsworld.net")) {
+          isTeacher = true;
+        } else {
+          if (user && (!user.email || !user.email.endsWith("@nsworld.net"))) {
+            auth.signOut();
+          }
+          isTeacher = false;
+        }
+        updateAuthUI();
+      });
+
+      if (loginBtn) {
+        loginBtn.addEventListener("click", async () => {
+          try {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: "select_account" });
+            await auth.signInWithPopup(provider);
+          } catch (err) {
+            console.error("로그인 오류:", err);
+            alert("로그인 중 오류가 발생했습니다. 다시 시도해 주세요.");
+          }
+        });
+      }
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+          try {
+            await auth.signOut();
+          } catch (err) {
+            console.error("로그아웃 오류:", err);
+            alert("로그아웃 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+      function setEditMode(on) {
+        isEditMode = on;
+        if (!editBtn) return;
+
+        if (on) {
+          editBtn.textContent = "수정 내용 저장";
+
+          modalTitle.style.display = "none";
+          modalTitleInput.style.display = "block";
+
+          modalCategory.style.display = "inline";
+          modalCategoryInput.style.display = "inline-block";
+
+          modalStorage.style.display = "inline";
+          modalStorageInput.style.display = "inline-block";
+
+          modalFoundPlace.style.display = "none";
+          modalFoundPlaceInput.style.display = "inline-block";
+
+          modalFoundTime.style.display = "none";
+          modalFoundTimeInput.style.display = "inline-block";
+
+          modalFinder.style.display = "none";
+          modalFinderInput.style.display = "inline-block";
+        } else {
+          editBtn.textContent = "수정하기";
+
+          modalTitle.style.display = "block";
+          modalTitleInput.style.display = "none";
+
+          modalCategory.style.display = "inline";
+          modalCategoryInput.style.display = "none";
+
+          modalStorage.style.display = "inline";
+          modalStorageInput.style.display = "none";
+
+          modalFoundPlace.style.display = "inline";
+          modalFoundPlaceInput.style.display = "none";
+
+          modalFoundTime.style.display = "inline";
+          modalFoundTimeInput.style.display = "none";
+
+          modalFinder.style.display = "inline";
+          modalFinderInput.style.display = "none";
+        }
+      }
+
+      function renderItems(filterText = "") {
+        if (!itemsContainer) return;
+        itemsContainer.innerHTML = "";
+
+        let list = items.slice();
+        list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+        if (filterText.trim()) {
+          const q = filterText.trim().toLowerCase();
+          list = list.filter((item) => {
+            const fields = [
+              item.title,
+              item.category,
+              item.storageLocation,
+              item.foundPlace,
+              item.finderName,
+              item.ownerInfo
+            ];
+            return fields.some((f) => (f || "").toLowerCase().includes(q));
+          });
+        }
+
+        if (currentCategory === "주인 찾음") {
+          list = list.filter((item) => item.status === "found");
+        } else if (currentCategory === "폐기 완료") {
+          list = list.filter((item) => item.status === "discarded");
+        } else {
+          list = list.filter((item) => item.status === "stored");
+          if (currentCategory !== "전체") {
+            list = list.filter((item) => item.category === currentCategory);
+          }
+        }
+
+        if (!list.length) {
+          if (emptyMessage) emptyMessage.style.display = "block";
+          return;
+        } else {
+          if (emptyMessage) emptyMessage.style.display = "none";
+        }
+
+        list.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "item-card";
+          card.dataset.itemId = item.id;
+
+          const imgWrap = document.createElement("div");
+          imgWrap.className = "item-image-wrapper";
+
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.src = item.imageUrl || "";
+          img.alt = item.title || "분실물 이미지";
+          imgWrap.appendChild(img);
+
+          const body = document.createElement("div");
+          body.className = "item-body";
+
+          const titleRow = document.createElement("div");
+          titleRow.className = "item-title-row";
+
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = item.title || "분실물";
+
+          const status = document.createElement("span");
+          status.className = "badge badge-status";
+          status.textContent = statusLabel(item);
+
+          titleRow.appendChild(title);
+          titleRow.appendChild(status);
+
+          const badgesRow = document.createElement("div");
+          if (item.category) {
+            const cat = document.createElement("span");
+            cat.className = "badge";
+            cat.textContent = item.category;
+            badgesRow.appendChild(cat);
+          }
+          if (item.storageLocation) {
+            const loc = document.createElement("span");
+            loc.className = "badge";
+            loc.textContent = "보관: " + item.storageLocation;
+            badgesRow.appendChild(loc);
+          }
+
+          const meta = document.createElement("div");
+          meta.className = "item-meta";
+          const placeSpan = document.createElement("span");
+          placeSpan.textContent = "습득 장소: " + (item.foundPlace || "-");
+          const timeSpan = document.createElement("span");
+          timeSpan.textContent =
+            "습득 시간: " +
+            formatDateTime(item.foundTime || item.createdAt);
+          const finderSpan = document.createElement("span");
+          finderSpan.textContent = "습득자: " + (item.finderName || "-");
+          meta.appendChild(placeSpan);
+          meta.appendChild(timeSpan);
+          meta.appendChild(finderSpan);
+
+          const footer = document.createElement("div");
+          footer.className = "item-footer";
+          footer.textContent = "등록일: " + formatDateTime(item.createdAt);
+
+          body.appendChild(titleRow);
+          body.appendChild(badgesRow);
+          body.appendChild(meta);
+          body.appendChild(footer);
+
+          card.appendChild(imgWrap);
+          card.appendChild(body);
+          itemsContainer.appendChild(card);
+
+          card.addEventListener("click", () => openModal(item.id));
+        });
+      }
+
+      function openModal(itemId) {
+        if (!detailModal) return;
+        const item = items.find((it) => it.id === itemId);
+        if (!item) return;
+        currentModalItemId = itemId;
+
+        setEditMode(false);
+
+        modalTitle.textContent = item.title || "분실물";
+        modalTitleInput.value = item.title || "";
+
+        modalImage.src = item.imageUrl || "";
+        modalCategory.textContent = item.category || "-";
+        modalCategoryInput.value = item.category || "기타";
+
+        modalStorage.textContent = item.storageLocation || "-";
+        modalStorageInput.value = item.storageLocation || "교무실";
+
+        const usedTime = item.foundTime || item.createdAt;
+        modalFoundTime.textContent = formatDateTime(usedTime);
+        modalFoundTimeInput.value = toLocalDateTimeInputValue(usedTime);
+
+        modalFoundPlace.textContent = item.foundPlace || "-";
+        modalFoundPlaceInput.value = item.foundPlace || "";
+
+        modalFinder.textContent = item.finderName || "-";
+        modalFinderInput.value = item.finderName || "";
+
+        modalCreatedAt.textContent = formatDateTime(item.createdAt);
+        modalStatus.textContent = statusLabel(item);
+
+        if (item.ownerInfo) {
+          modalOwnerInfoRow.style.display = "block";
+          modalOwnerInfo.textContent = item.ownerInfo;
+        } else {
+          modalOwnerInfoRow.style.display = "none";
+          modalOwnerInfo.textContent = "";
+        }
+
+        if (!isTeacher) {
+          ownerDoneBtn.disabled = true;
+          discardBtn.disabled = true;
+          editBtn.disabled = true;
+          reRegisterBtn.style.display = "none";
+        } else {
+          ownerDoneBtn.classList.remove("btn-primary", "btn-disabled");
+          if (item.status === "stored") {
+            ownerDoneBtn.disabled = false;
+            ownerDoneBtn.textContent = "주인 찾기 완료";
+            ownerDoneBtn.classList.add("btn-primary");
+          } else if (item.status === "found") {
+            ownerDoneBtn.disabled = true;
+            ownerDoneBtn.textContent = "주인 찾기 완료";
+            ownerDoneBtn.classList.add("btn-primary");
+          } else if (item.status === "discarded") {
+            ownerDoneBtn.disabled = true;
+            ownerDoneBtn.textContent = "주인 찾기 완료";
+            ownerDoneBtn.classList.add("btn-disabled");
+          }
+
+          const discardAvailable = canDiscard(item);
+          discardBtn.classList.remove("btn-danger", "btn-disabled");
+          if (item.status === "discarded") {
+            discardBtn.disabled = true;
+            discardBtn.textContent = "폐기 처리 완료";
+            discardBtn.classList.add("btn-danger");
+          } else if (discardAvailable) {
+            discardBtn.disabled = false;
+            discardBtn.textContent = "폐기 처리";
+            discardBtn.classList.add("btn-danger");
+          } else {
+            discardBtn.disabled = true;
+            discardBtn.textContent = "폐기 처리";
+            discardBtn.classList.add("btn-disabled");
+          }
+
+          if (item.status === "stored") {
+            editBtn.disabled = false;
+            reRegisterBtn.style.display = "none";
+          } else {
+            editBtn.disabled = true;
+            reRegisterBtn.style.display = "block";
+            if (isEditMode) setEditMode(false);
+          }
+        }
+
+        detailModal.style.display = "flex";
+      }
+
+      function closeModal() {
+        if (!detailModal) return;
+        detailModal.style.display = "none";
+        currentModalItemId = null;
+        setEditMode(false);
+      }
+
+      if (modalCloseBtn) {
+        modalCloseBtn.addEventListener("click", closeModal);
+      }
+      if (detailModal) {
+        detailModal.addEventListener("click", (e) => {
+          if (e.target === detailModal) closeModal();
+        });
+      }
+      if (modalImageWrapper) {
+        modalImageWrapper.addEventListener("click", closeModal);
+      }
+
+      if (searchBtn) {
+        searchBtn.addEventListener("click", () => {
+          renderItems(searchInput.value);
+        });
+      }
+      if (searchInput) {
+        searchInput.addEventListener("keyup", (e) => {
+          if (e.key === "Enter") renderItems(searchInput.value);
+        });
+      }
+      if (toggleFormBtn && teacherFormWrapper) {
+        toggleFormBtn.addEventListener("click", () => {
+          const visible = teacherFormWrapper.style.display === "block";
+          teacherFormWrapper.style.display = visible ? "none" : "block";
+        });
+      }
+      if (categoryButtons && categoryButtons.length) {
+        categoryButtons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            currentCategory = btn.dataset.category;
+            categoryButtons.forEach((b) =>
+              b.classList.toggle("btn-chip-active", b === btn)
+            );
+            renderItems(searchInput.value);
+          });
+        });
+      }
+
+      if (lostItemForm) {
+        lostItemForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인 후 등록할 수 있습니다.");
+            return;
+          }
+          if (!imageInput.files || !imageInput.files[0]) {
+            alert("분실물 사진을 반드시 업로드해 주세요.");
+            return;
+          }
+          if (!foundPlaceInput.value.trim()) {
+            alert("습득 장소를 입력해 주세요.");
+            foundPlaceInput.focus();
+            return;
+          }
+
+          const submitBtn = lostItemForm.querySelector('button[type="submit"]');
+          let originalText = "등록하기";
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            originalText = submitBtn.textContent;
+            submitBtn.textContent = "등록 중...";
+          }
+
+          try {
+            const file = imageInput.files[0];
+            const imageUrl = await uploadToImgBB(file);
+
+            const title = titleInput.value.trim();
+            const category = categorySelect.value;
+            const storageLocation = storageSelect.value;
+            const foundPlace = foundPlaceInput.value.trim();
+            const foundTimeVal = foundTimeInput.value;
+            const finderName = finderNameInput.value.trim();
+
+            let foundTimeTs = null;
+            if (foundTimeVal) {
+              const dt = new Date(foundTimeVal);
+              if (!Number.isNaN(dt.getTime())) {
+                foundTimeTs = firebase.firestore.Timestamp.fromDate(dt);
+              }
+            }
+
+            await db.collection("lost_items").add({
+              title,
+              category,
+              storageLocation,
+              foundPlace,
+              foundTime: foundTimeTs,
+              finderName,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              imageUrl,
+              status: "stored",
+              ownerInfo: ""
+            });
+
+            lostItemForm.reset();
+            alert("분실물이 등록되었습니다.");
+            lastVisible = null;
+            await loadItems(true);
+          } catch (err) {
+            console.error("등록 오류:", err);
+            alert("분실물 등록 중 오류가 발생했습니다.");
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = !isTeacher;
+              submitBtn.textContent = originalText;
+            }
+          }
+        });
+      }
+
+      if (ownerDoneBtn) {
+        ownerDoneBtn.addEventListener("click", async () => {
+          if (!currentModalItemId) return;
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인해야 합니다.");
+            return;
+          }
+          const item = items.find((it) => it.id === currentModalItemId);
+          if (!item || item.status !== "stored") return;
+
+          const info = prompt("수령 학생 정보 입력\n예) 4학년 1반 10번 홍길동");
+          if (!info || !info.trim()) return;
+
+          try {
+            await db.collection("lost_items").doc(item.id).update({
+              status: "found",
+              ownerInfo: info.trim()
+            });
+            alert("주인 찾기 완료로 처리되었습니다.");
+            closeModal();
+          } catch (err) {
+            console.error("주인 찾기 변경 오류:", err);
+            alert("상태 변경 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+      if (discardBtn) {
+        discardBtn.addEventListener("click", async () => {
+          if (!currentModalItemId) return;
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인해야 합니다.");
+            return;
+          }
+          const item = items.find((it) => it.id === currentModalItemId);
+          if (!item || item.status === "discarded") return;
+
+          if (!canDiscard(item)) {
+            alert("보관 후 2주가 지나지 않아 폐기 처리할 수 없습니다.");
+            return;
+          }
+          const ok = confirm("해당 물품을 정말 폐기 처리하시겠습니까?");
+          if (!ok) return;
+
+          try {
+            await db.collection("lost_items").doc(item.id).update({
+              status: "discarded"
+            });
+            alert("해당 물품이 폐기 완료 상태로 변경되었습니다.");
+            closeModal();
+          } catch (err) {
+            console.error("폐기 처리 오류:", err);
+            alert("폐기 처리 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+      if (editBtn) {
+        editBtn.addEventListener("click", async () => {
+          if (!currentModalItemId) return;
+          const item = items.find((it) => it.id === currentModalItemId);
+          if (!item) return;
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인해야 합니다.");
+            return;
+          }
+          if (editBtn.disabled) return;
+
+          if (!isEditMode) {
+            setEditMode(true);
+            return;
+          }
+
+          const newTitle = modalTitleInput.value.trim();
+          const newCategory = modalCategoryInput.value;
+          const newStorage = modalStorageInput.value;
+          const newFoundPlace = modalFoundPlaceInput.value.trim();
+          const newFoundTimeVal = modalFoundTimeInput.value;
+          const newFinderName = modalFinderInput.value.trim();
+
+          if (!newTitle) {
+            alert("분실물 이름 / 설명을 입력해 주세요.");
+            modalTitleInput.focus();
+            return;
+          }
+          if (!newFoundPlace) {
+            alert("습득 장소를 입력해 주세요.");
+            modalFoundPlaceInput.focus();
+            return;
+          }
+
+          const updates = {
+            title: newTitle,
+            category: newCategory,
+            storageLocation: newStorage,
+            foundPlace: newFoundPlace,
+            finderName: newFinderName
+          };
+
+          if (newFoundTimeVal) {
+            const dt = new Date(newFoundTimeVal);
+            if (!Number.isNaN(dt.getTime())) {
+              updates.foundTime = firebase.firestore.Timestamp.fromDate(dt);
+            }
+          } else {
+            updates.foundTime = null;
+          }
+
+          try {
+            await db.collection("lost_items").doc(item.id).update(updates);
+            alert("분실물 정보가 수정되었습니다.");
+            setEditMode(false);
+          } catch (err) {
+            console.error("수정 오류:", err);
+            alert("수정 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+      if (reRegisterBtn) {
+        reRegisterBtn.addEventListener("click", async () => {
+          if (!currentModalItemId) return;
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인해야 합니다.");
+            return;
+          }
+          const item = items.find((it) => it.id === currentModalItemId);
+          if (!item) return;
+          if (item.status !== "found" && item.status !== "discarded") return;
+
+          const ok = confirm("이 물품을 다시 '보관 중' 상태로 변경하시겠습니까?");
+          if (!ok) return;
+
+          try {
+            await db.collection("lost_items").doc(item.id).update({
+              status: "stored"
+            });
+            alert("물품이 다시 '보관 중' 상태로 변경되었습니다.");
+            closeModal();
+          } catch (err) {
+            console.error("재등록 오류:", err);
+            alert("재등록 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+      async function loadItems(isInitial = false) {
+        if (isLoading) return;
+        isLoading = true;
+        try {
+          let query = db.collection("lost_items")
+            .orderBy("createdAt", "desc")
+            .limit(PAGE_SIZE);
+          if (!isInitial && lastVisible) {
+            query = query.startAfter(lastVisible);
+          }
+          const snapshot = await query.get();
+
+          if (isInitial) {
+            items = [];
+          }
+          if (!snapshot.empty) {
+            snapshot.docs.forEach((doc) => {
+              const data = doc.data() || {};
+              items.push({
+                id: doc.id,
+                title: data.title || "",
+                category: data.category || "기타",
+                storageLocation: data.storageLocation || "",
+                foundPlace: data.foundPlace || "",
+                foundTime: normalizeTs(data.foundTime),
+                finderName: data.finderName || "",
+                createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
+                imageUrl: data.imageUrl || "",
+                status: data.status || "stored",
+                ownerInfo: data.ownerInfo || ""
+              });
+            });
+            lastVisible = snapshot.docs[snapshot.docs.length - 1];
+          }
+
+          if (snapshot.empty || snapshot.docs.length < PAGE_SIZE) {
+            if (loadMoreBtn) loadMoreBtn.style.display = "none";
+          } else {
+            if (loadMoreBtn) loadMoreBtn.style.display = "block";
+          }
+
+          renderItems(searchInput ? searchInput.value : "");
+        } catch (err) {
+          console.error("분실물 불러오기 오류:", err);
+          alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+        } finally {
+          isLoading = false;
+        }
+      }
+
+      if (loadMoreBtn) {
+        loadMoreBtn.addEventListener("click", () => {
+          loadItems(false);
+        });
+      }
+
+      loadItems(true);
+      updateAuthUI();
+    });
+  </script>
+</body>
+</html>
