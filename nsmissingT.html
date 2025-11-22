@@ -753,7 +753,7 @@ const firebaseConfig = {
                   type: blob.type || "image/jpeg"
                 });
                 resolve(resizedFile);
-              }, "image/jpeg", 0.9);
+              }, "image/jpeg", 0.7);
             };
             img.onerror = () => reject(new Error("이미지를 불러오지 못했습니다."));
             img.src = e.target.result;
@@ -765,7 +765,7 @@ const firebaseConfig = {
 
       async function uploadToImgBB(file) {
         if (!file) return "";
-        const resized = await resizeImage(file, 800);
+        const resized = await resizeImage(file, 600);
         const formData = new FormData();
         formData.append("image", resized);
         const url = "https://api.imgbb.com/1/upload?key=" + encodeURIComponent(IMGBB_API_KEY);
