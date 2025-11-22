@@ -165,8 +165,8 @@
       white-space: nowrap;
     }
     .btn-bulk-found {
-      background: #fef3c7;  /* 연노랑 */
-      color: #92400e;
+      background: #dcfce7;  /* 연한 초록색 계열 */
+      color: #166534;       /* 진한 초록색 글씨 */
     }
     .btn-bulk-found:disabled {
       opacity: 0.6;
@@ -195,7 +195,7 @@
       cursor: pointer;
     }
     .item-card.selected {
-      outline: 2px solid #facc15;
+      outline: 3px solid #facc15;  /* 선택 테두리 조금 더 굵게 */
       outline-offset: 0;
     }
 
@@ -649,7 +649,7 @@
       <div class="section-header-row">
         <div class="section-title" style="margin-top:16px;">분실물 현황</div>
         <div id="bulkActions" class="bulk-actions" style="display:none;">
-          <button id="bulkFoundBtn" class="btn btn-bulk-found" disabled>선택한 항목 주인 찾기</button>
+          <button id="bulkFoundBtn" class="btn btn-bulk-found" disabled>선택한 항목 일괄 주인 찾기</button>
           <button id="bulkDeleteBtn" class="btn btn-bulk-delete" disabled>선택한 항목 삭제</button>
         </div>
       </div>
@@ -1012,6 +1012,15 @@ const firebaseConfig = {
         const hasSelection = selectedIds && selectedIds.size > 0;
         if (bulkFoundBtn) bulkFoundBtn.disabled = !hasSelection;
         if (bulkDeleteBtn) bulkDeleteBtn.disabled = !hasSelection;
+      }
+
+      function updateBulkButtonLabel() {
+        if (!bulkFoundBtn) return;
+        if (currentCategory === "주인 찾음" || currentCategory === "폐기 완료") {
+          bulkFoundBtn.textContent = "선택한 항목 일괄 재등록";
+        } else {
+          bulkFoundBtn.textContent = "선택한 항목 일괄 주인 찾기";
+        }
       }
 
       function updateAuthUI() {
@@ -1418,6 +1427,7 @@ const firebaseConfig = {
             categoryButtons.forEach((b) =>
               b.classList.toggle("btn-chip-active", b === btn)
             );
+            updateBulkButtonLabel();
             renderItems(searchInput.value);
           });
         });
@@ -1679,29 +1689,59 @@ const firebaseConfig = {
             alert("선택된 분실물이 없습니다.");
             return;
           }
-          const targetIds = Array.from(selectedIds).filter((id) => {
-            const item = items.find((it) => it.id === id);
-            return item && item.status === "stored";
-          });
-          if (!targetIds.length) {
-            alert("현재 '보관 중' 상태인 선택 항목이 없습니다.");
-            return;
-          }
-          const ok = confirm(`선택한 ${targetIds.length}개의 분실물을 모두 '주인 찾음' 상태로 변경하시겠습니까?`);
-          if (!ok) return;
 
-          try {
-            for (const id of targetIds) {
-              await db.collection("lost_items").doc(id).update({
-                status: "found"
-              });
+          const isReRegisterMode = (currentCategory === "주인 찾음" || currentCategory === "폐기 완료");
+
+          if (isReRegisterMode) {
+            const targetIds = Array.from(selectedIds).filter((id) => {
+              const item = items.find((it) => it.id === id);
+              return item && (item.status === "found" || item.status === "discarded");
+            });
+            if (!targetIds.length) {
+              alert("재등록할 수 있는 선택 항목이 없습니다.");
+              return;
             }
-            alert(`선택한 ${targetIds.length}개의 분실물이 '주인 찾음'으로 처리되었습니다.`);
-            lastVisible = null;
-            await loadItems(true);
-          } catch (err) {
-            console.error("일괄 주인 찾기 처리 오류:", err);
-            alert("일괄 주인 찾기 처리 중 오류가 발생했습니다.");
+            const ok = confirm(`선택한 ${targetIds.length}개의 분실물을 다시 '보관 중' 상태로 재등록하시겠습니까?`);
+            if (!ok) return;
+
+            try {
+              for (const id of targetIds) {
+                await db.collection("lost_items").doc(id).update({
+                  status: "stored"
+                });
+              }
+              alert(`선택한 ${targetIds.length}개의 분실물이 다시 '보관 중' 상태로 재등록되었습니다.`);
+              lastVisible = null;
+              await loadItems(true);
+            } catch (err) {
+              console.error("일괄 재등록 처리 오류:", err);
+              alert("일괄 재등록 처리 중 오류가 발생했습니다.");
+            }
+          } else {
+            const targetIds = Array.from(selectedIds).filter((id) => {
+              const item = items.find((it) => it.id === id);
+              return item && item.status === "stored";
+            });
+            if (!targetIds.length) {
+              alert("현재 '보관 중' 상태인 선택 항목이 없습니다.");
+              return;
+            }
+            const ok = confirm(`선택한 ${targetIds.length}개의 분실물을 모두 '주인 찾음' 상태로 변경하시겠습니까?`);
+            if (!ok) return;
+
+            try {
+              for (const id of targetIds) {
+                await db.collection("lost_items").doc(id).update({
+                  status: "found"
+                });
+              }
+              alert(`선택한 ${targetIds.length}개의 분실물이 '주인 찾음'으로 처리되었습니다.`);
+              lastVisible = null;
+              await loadItems(true);
+            } catch (err) {
+              console.error("일괄 주인 찾기 처리 오류:", err);
+              alert("일괄 주인 찾기 처리 중 오류가 발생했습니다.");
+            }
           }
         });
       }
@@ -1793,6 +1833,7 @@ const firebaseConfig = {
 
       loadItems(true);
       updateAuthUI();
+      updateBulkButtonLabel();
     });
   </script>
 </body>
