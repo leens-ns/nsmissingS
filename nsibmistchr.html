@@ -416,6 +416,23 @@
       color: #78350f;
     }
 
+
+    /* 삭제하기 버튼 (강조용 진한 빨강 계열) */
+    .btn-delete {
+      margin-top: 6px;
+      width: 100%;
+      padding: 9px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      justify-content: center;
+      background: #b91c1c;  /* 짙은 빨강 */
+      color: #ffffff;
+    }
+    .btn-delete:hover {
+      background: #991b1b;
+      color: #ffffff;
+    }
+
     /* 모달 내 input 간단 스타일 */
     .modal-input {
       width: auto;
@@ -681,6 +698,8 @@
 
           <!-- 수정하기 버튼 -->
           <button class="btn btn-edit" id="editBtn">수정하기</button>
+          <!-- 삭제하기 버튼 (교사용 전용) -->
+          <button class="btn btn-delete" id="deleteBtn">삭제하기</button>
           <!-- 재등록 버튼 (처음엔 숨김) -->
           <button class="btn btn-outline btn-reregister" id="reRegisterBtn" style="display:none;">
             재등록
@@ -875,6 +894,7 @@ const firebaseConfig = {
       const discardBtn          = document.getElementById("discardBtn");
       const editBtn             = document.getElementById("editBtn");
       const reRegisterBtn       = document.getElementById("reRegisterBtn");
+      const deleteBtn          = document.getElementById("deleteBtn");
 
       // ====== 상단 로그인/상태 영역 추가를 위해 동적으로 요소 삽입 ======
       (function insertAuthRow() {
@@ -1192,7 +1212,12 @@ const firebaseConfig = {
           discardBtn.disabled = true;
           editBtn.disabled = true;
           reRegisterBtn.style.display = "none";
+          if (deleteBtn) deleteBtn.disabled = true;
         } else {
+          if (deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.style.display = "block";
+          }
           ownerDoneBtn.classList.remove("btn-primary", "btn-disabled");
           if (item.status === "stored") {
             ownerDoneBtn.disabled = false;
@@ -1499,6 +1524,33 @@ const firebaseConfig = {
           } catch (err) {
             console.error("재등록 오류:", err);
             alert("재등록 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", async () => {
+          if (!currentModalItemId) return;
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인해야 합니다.");
+            return;
+          }
+          const item = items.find((it) => it.id === currentModalItemId);
+          if (!item) return;
+
+          const ok = confirm("해당 분실물을 정말 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.");
+          if (!ok) return;
+
+          try {
+            await db.collection("lost_items").doc(item.id).delete();
+            alert("해당 분실물이 완전히 삭제되었습니다.");
+            closeModal();
+            lastVisible = null;
+            await loadItems(true);
+          } catch (err) {
+            console.error("삭제 오류:", err);
+            alert("분실물 삭제 중 오류가 발생했습니다.");
           }
         });
       }
