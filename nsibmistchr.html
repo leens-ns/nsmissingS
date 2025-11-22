@@ -145,6 +145,60 @@
       margin-bottom: 12px;
     }
 
+    .section-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    /* 일괄 처리 버튼 영역 */
+    .bulk-actions {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 8px;
+      margin: 0;
+    }
+    .bulk-actions .btn {
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .btn-bulk-found {
+      background: #fef3c7;  /* 연노랑 */
+      color: #92400e;
+    }
+    .btn-bulk-found:disabled {
+      opacity: 0.6;
+    }
+    .btn-bulk-delete {
+      background: #fee2e2;  /* 연한 빨강 */
+      color: #b91c1c;
+    }
+    .btn-bulk-delete:disabled {
+      opacity: 0.6;
+    }
+
+    /* 카드 선택 체크박스 영역 */
+    .item-select-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px 0;
+      font-size: 0.75rem;
+      color: #6b7280;
+      cursor: pointer;
+    }
+    .item-select-checkbox {
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+    }
+    .item-card.selected {
+      outline: 2px solid #facc15;
+      outline-offset: 0;
+    }
+
     .badge {
       display: inline-block;
       padding: 2px 8px;
@@ -592,7 +646,13 @@
         </form>
       </div>
 
-      <div class="section-title" style="margin-top:16px;">분실물 현황</div>
+      <div class="section-header-row">
+        <div class="section-title" style="margin-top:16px;">분실물 현황</div>
+        <div id="bulkActions" class="bulk-actions" style="display:none;">
+          <button id="bulkFoundBtn" class="btn btn-bulk-found" disabled>선택한 항목 주인 찾기</button>
+          <button id="bulkDeleteBtn" class="btn btn-bulk-delete" disabled>선택한 항목 삭제</button>
+        </div>
+      </div>
       <div id="itemsContainer"></div>
       <div id="emptyMessage" class="empty-message" style="display:none;">
         아직 등록된 분실물이 없습니다. 교사가 분실물을 등록하면 이곳에 표시됩니다.
@@ -861,6 +921,9 @@ const firebaseConfig = {
       const lostItemForm        = document.getElementById("lostItemForm");
       const categoryButtons     = document.querySelectorAll("#categoryButtons .btn-chip");
       const loadMoreBtn        = document.getElementById("loadMoreBtn");
+      const bulkActions        = document.getElementById("bulkActions");
+      const bulkFoundBtn       = document.getElementById("bulkFoundBtn");
+      const bulkDeleteBtn      = document.getElementById("bulkDeleteBtn");
 
       const imageInput          = document.getElementById("itemImage");
       const titleInput          = document.getElementById("itemTitle");
@@ -935,6 +998,7 @@ const firebaseConfig = {
       const logoutBtn   = document.getElementById("logoutBtn");
 
       let items = [];
+      let selectedIds = new Set();
       let currentCategory = "전체";
       let currentModalItemId = null;
       let isEditMode = false;
@@ -944,6 +1008,12 @@ const firebaseConfig = {
       let isLoading = false;
       const PAGE_SIZE = 5;
 
+      function updateBulkButtonsState() {
+        const hasSelection = selectedIds && selectedIds.size > 0;
+        if (bulkFoundBtn) bulkFoundBtn.disabled = !hasSelection;
+        if (bulkDeleteBtn) bulkDeleteBtn.disabled = !hasSelection;
+      }
+
       function updateAuthUI() {
         const submitBtn = lostItemForm ? lostItemForm.querySelector('button[type="submit"]') : null;
         if (isTeacher && currentUser) {
@@ -952,6 +1022,7 @@ const firebaseConfig = {
           loginBtn.style.display = "none";
           logoutBtn.style.display = "inline-flex";
           if (submitBtn) submitBtn.disabled = false;
+          if (bulkActions) bulkActions.style.display = "flex";
         } else if (currentUser && !isTeacher) {
           authMessage.innerHTML =
             "<span style='color:#b91c1c; font-weight:500;'>" +
@@ -960,13 +1031,20 @@ const firebaseConfig = {
           loginBtn.style.display = "inline-flex";
           logoutBtn.style.display = "inline-flex";
           if (submitBtn) submitBtn.disabled = true;
+          if (bulkActions) bulkActions.style.display = "none";
+          selectedIds.clear();
+          updateBulkButtonsState();
         } else {
           authMessage.textContent = "로그인하지 않은 상태입니다.";
           loginBtn.style.display = "inline-flex";
           logoutBtn.style.display = "none";
           if (submitBtn) submitBtn.disabled = true;
+          if (bulkActions) bulkActions.style.display = "none";
+          selectedIds.clear();
+          updateBulkButtonsState();
         }
       }
+
 
       auth.onAuthStateChanged((user) => {
         currentUser = user;
@@ -1097,6 +1175,40 @@ const firebaseConfig = {
           card.className = "item-card";
           card.dataset.itemId = item.id;
 
+          if (selectedIds.has(item.id)) {
+            card.classList.add("selected");
+          }
+
+          const selectRow = document.createElement("div");
+          selectRow.className = "item-select-row";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "item-select-checkbox";
+          checkbox.checked = selectedIds.has(item.id);
+          const onToggleSelect = () => {
+            if (checkbox.checked) {
+              selectedIds.add(item.id);
+              card.classList.add("selected");
+            } else {
+              selectedIds.delete(item.id);
+              card.classList.remove("selected");
+            }
+            updateBulkButtonsState();
+          };
+          checkbox.addEventListener("click", (e) => {
+            e.stopPropagation();
+            onToggleSelect();
+          });
+          selectRow.addEventListener("click", (e) => {
+            e.stopPropagation();
+            checkbox.checked = !checkbox.checked;
+            onToggleSelect();
+          });
+          const selectLabel = document.createElement("span");
+          selectLabel.textContent = "선택";
+          selectRow.appendChild(checkbox);
+          selectRow.appendChild(selectLabel);
+
           const imgWrap = document.createElement("div");
           imgWrap.className = "item-image-wrapper";
 
@@ -1160,12 +1272,14 @@ const firebaseConfig = {
           body.appendChild(meta);
           body.appendChild(footer);
 
+          card.appendChild(selectRow);
           card.appendChild(imgWrap);
           card.appendChild(body);
           itemsContainer.appendChild(card);
 
           card.addEventListener("click", () => openModal(item.id));
         });
+        updateBulkButtonsState();
       }
 
       function openModal(itemId) {
@@ -1555,6 +1669,71 @@ const firebaseConfig = {
         });
       }
 
+      if (bulkFoundBtn) {
+        bulkFoundBtn.addEventListener("click", async () => {
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인해야 합니다.");
+            return;
+          }
+          if (!selectedIds.size) {
+            alert("선택된 분실물이 없습니다.");
+            return;
+          }
+          const targetIds = Array.from(selectedIds).filter((id) => {
+            const item = items.find((it) => it.id === id);
+            return item && item.status === "stored";
+          });
+          if (!targetIds.length) {
+            alert("현재 '보관 중' 상태인 선택 항목이 없습니다.");
+            return;
+          }
+          const ok = confirm(`선택한 ${targetIds.length}개의 분실물을 모두 '주인 찾음' 상태로 변경하시겠습니까?`);
+          if (!ok) return;
+
+          try {
+            for (const id of targetIds) {
+              await db.collection("lost_items").doc(id).update({
+                status: "found"
+              });
+            }
+            alert(`선택한 ${targetIds.length}개의 분실물이 '주인 찾음'으로 처리되었습니다.`);
+            lastVisible = null;
+            await loadItems(true);
+          } catch (err) {
+            console.error("일괄 주인 찾기 처리 오류:", err);
+            alert("일괄 주인 찾기 처리 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
+      if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener("click", async () => {
+          if (!isTeacher || !currentUser) {
+            alert("@nsworld.net 교사 계정으로 로그인해야 합니다.");
+            return;
+          }
+          if (!selectedIds.size) {
+            alert("선택된 분실물이 없습니다.");
+            return;
+          }
+          const targetIds = Array.from(selectedIds);
+          const ok = confirm(`선택한 ${targetIds.length}개의 분실물을 정말 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.`);
+          if (!ok) return;
+
+          try {
+            for (const id of targetIds) {
+              await db.collection("lost_items").doc(id).delete();
+            }
+            alert(`선택한 ${targetIds.length}개의 분실물이 삭제되었습니다.`);
+            lastVisible = null;
+            await loadItems(true);
+          } catch (err) {
+            console.error("일괄 삭제 처리 오류:", err);
+            alert("일괄 삭제 처리 중 오류가 발생했습니다.");
+          }
+        });
+      }
+
       async function loadItems(isInitial = false) {
         if (isLoading) return;
         isLoading = true;
@@ -1569,6 +1748,7 @@ const firebaseConfig = {
 
           if (isInitial) {
             items = [];
+            selectedIds.clear();
           }
           if (!snapshot.empty) {
             snapshot.docs.forEach((doc) => {
