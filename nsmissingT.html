@@ -460,37 +460,6 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
-  
-    .auth-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-    }
-    .auth-status {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-      color: #334155;
-    }
-    .auth-email {
-      font-weight: 600;
-      color: #1d4ed8;
-    }
-    .auth-warning {
-      color: #b91c1c;
-      font-weight: 500;
-    }
-    .auth-buttons {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
   </style>
 </head>
 <body>
@@ -503,13 +472,6 @@
     </header>
 
     <div class="card">
-      <div class="auth-row">
-        <div class="auth-status" id="authMessage">로그인하지 않은 상태입니다.</div>
-        <div class="auth-buttons">
-          <button class="btn btn-outline" id="loginBtn">Google 로그인</button>
-          <button class="btn btn-outline" id="logoutBtn" style="display:none;">로그아웃</button>
-        </div>
-      </div>
       <div class="search-row">
         <input
           type="text"
@@ -733,24 +695,92 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      // Firebase 설정
-      const firebaseConfig = {
-        apiKey: "AIzaSyC2Di2seSL1SY4PghoVlY5aqGMkEwhaPgA",
-        authDomain: "nsmissingt.firebaseapp.com",
-        projectId: "nsmissingt",
-        storageBucket: "nsmissingt.firebasestorage.app",
-        messagingSenderId: "648041982970",
-        appId: "1:648041982970:web:384d5575410acb5ad95243"
-      };
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
+      // ===================== Firebase 초기화 =====================
+const firebaseConfig = {
+  apiKey: "AIzaSyDyp8MRjZUwZZxBMUZBDpCqYac2TaMIO5M",
+  authDomain: "nsmissingt-e9fbf.firebaseapp.com",
+  projectId: "nsmissingt-e9fbf",
+  storageBucket: "nsmissingt-e9fbf.firebasestorage.app",
+  messagingSenderId: "163980342864",
+  appId: "1:163980342864:web:e699b4d11af04752cd0355"
+};
+      firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
       const auth = firebase.auth();
 
+      // ===================== imgbb 설정 =====================
       const IMGBB_API_KEY = "b6eac487cb547bc827cef84b2fbbd7c7";
 
-      // ===== 공통 유틸 =====
+      async function resizeImage(file, maxSize) {
+        return new Promise((resolve, reject) => {
+          if (!file) {
+            resolve(null);
+            return;
+          }
+          const img = new Image();
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            img.onload = () => {
+              let w = img.width;
+              let h = img.height;
+              if (!w || !h) {
+                resolve(file);
+                return;
+              }
+              if (w <= maxSize && h <= maxSize) {
+                resolve(file);
+                return;
+              }
+              let newW, newH;
+              if (w > h) {
+                newW = maxSize;
+                newH = Math.round(h * maxSize / w);
+              } else {
+                newH = maxSize;
+                newW = Math.round(w * maxSize / h);
+              }
+              const canvas = document.createElement("canvas");
+              canvas.width = newW;
+              canvas.height = newH;
+              const ctx = canvas.getContext("2d");
+              ctx.drawImage(img, 0, 0, newW, newH);
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  reject(new Error("이미지 리사이즈 중 오류가 발생했습니다."));
+                  return;
+                }
+                const resizedFile = new File([blob], file.name || "image.jpg", {
+                  type: blob.type || "image/jpeg"
+                });
+                resolve(resizedFile);
+              }, "image/jpeg", 0.9);
+            };
+            img.onerror = () => reject(new Error("이미지를 불러오지 못했습니다."));
+            img.src = e.target.result;
+          };
+          reader.onerror = () => reject(new Error("이미지를 읽지 못했습니다."));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadToImgBB(file) {
+        if (!file) return "";
+        const resized = await resizeImage(file, 800);
+        const formData = new FormData();
+        formData.append("image", resized);
+        const url = "https://api.imgbb.com/1/upload?key=" + encodeURIComponent(IMGBB_API_KEY);
+        const res = await fetch(url, { method: "POST", body: formData });
+        if (!res.ok) {
+          throw new Error("이미지 업로드에 실패했습니다.(네트워크 오류)");
+        }
+        const data = await res.json();
+        if (!data || !data.success) {
+          throw new Error("이미지 업로드에 실패했습니다.");
+        }
+        return data.data.url;
+      }
+
+      // ===================== 공통 유틸 =====================
       function normalizeTs(value) {
         if (!value) return "";
         if (typeof value === "string") return value;
@@ -783,6 +813,7 @@
       }
 
       function canDiscard(item) {
+        if (item.status === "discarded") return false;
         if (!item.createdAt) return false;
         const created = new Date(item.createdAt);
         if (Number.isNaN(created.getTime())) return false;
@@ -798,132 +829,87 @@
         return item.status || "상태 미정";
       }
 
-      // 이미지 리사이즈 후 imgbb 업로드
-      async function resizeImage(file, maxSize) {
-        return new Promise((resolve, reject) => {
-          if (!file) {
-            resolve(null);
-            return;
-          }
-          const img = new Image();
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            img.onload = () => {
-              let w = img.width;
-              let h = img.height;
-              if (!w || !h) {
-                resolve(file);
-                return;
-              }
-              if (w <= maxSize && h <= maxSize) {
-                resolve(file);
-                return;
-              }
-              let newW, newH;
-              if (w > h) {
-                newW = maxSize;
-                newH = Math.round((h * maxSize) / w);
-              } else {
-                newH = maxSize;
-                newW = Math.round((w * maxSize) / h);
-              }
-              const canvas = document.createElement("canvas");
-              canvas.width = newW;
-              canvas.height = newH;
-              const ctx = canvas.getContext("2d");
-              ctx.drawImage(img, 0, 0, newW, newH);
-              canvas.toBlob(
-                (blob) => {
-                  if (!blob) {
-                    reject(new Error("이미지 리사이즈 중 오류가 발생했습니다."));
-                    return;
-                  }
-                  const resizedFile = new File([blob], file.name || "image.jpg", {
-                    type: blob.type || "image/jpeg"
-                  });
-                  resolve(resizedFile);
-                },
-                "image/jpeg",
-                0.9
-              );
-            };
-            img.onerror = () => reject(new Error("이미지 로드에 실패했습니다."));
-            img.src = e.target.result;
-          };
-          reader.onerror = () => reject(new Error("이미지 읽기에 실패했습니다."));
-          reader.readAsDataURL(file);
-        });
-      }
+      // ===================== DOM 요소 =====================
+      const itemsContainer      = document.getElementById("itemsContainer");
+      const emptyMessage        = document.getElementById("emptyMessage");
+      const searchInput         = document.getElementById("searchInput");
+      const searchBtn           = document.getElementById("searchBtn");
+      const toggleFormBtn       = document.getElementById("toggleFormBtn");
+      const teacherFormWrapper  = document.getElementById("teacherFormWrapper");
+      const lostItemForm        = document.getElementById("lostItemForm");
+      const categoryButtons     = document.querySelectorAll("#categoryButtons .btn-chip");
 
-      async function uploadToImgBB(file) {
-        if (!file) return "";
-        const resized = await resizeImage(file, 800);
-        const formData = new FormData();
-        formData.append("image", resized);
-        const url = "https://api.imgbb.com/1/upload?key=" + encodeURIComponent(IMGBB_API_KEY);
-        const res = await fetch(url, { method: "POST", body: formData });
-        if (!res.ok) {
-          throw new Error("이미지 업로드에 실패했습니다. (네트워크 오류)");
-        }
-        const data = await res.json();
-        if (!data || !data.success) {
-          throw new Error("이미지 업로드에 실패했습니다.");
-        }
-        return data.data.url;
-      }
+      const imageInput          = document.getElementById("itemImage");
+      const titleInput          = document.getElementById("itemTitle");
+      const categorySelect      = document.getElementById("itemCategory");
+      const storageSelect       = document.getElementById("storageLocation");
+      const foundPlaceInput     = document.getElementById("foundPlace");
+      const foundTimeInput      = document.getElementById("foundTime");
+      const finderNameInput     = document.getElementById("finderName");
 
-      // ===== DOM 요소 =====
-      const itemsContainer = document.getElementById("itemsContainer");
-      const emptyMessage = document.getElementById("emptyMessage");
-      const searchInput = document.getElementById("searchInput");
-      const searchBtn = document.getElementById("searchBtn");
-      const toggleFormBtn = document.getElementById("toggleFormBtn");
-      const teacherFormWrapper = document.getElementById("teacherFormWrapper");
-      const lostItemForm = document.getElementById("lostItemForm");
-      const categoryButtons = document.querySelectorAll("#categoryButtons .btn-chip");
-
-      // 폼 요소
-      const imageInput = document.getElementById("itemImage");
-      const titleInput = document.getElementById("itemTitle");
-      const categorySelect = document.getElementById("itemCategory");
-      const storageSelect = document.getElementById("storageLocation");
-      const foundPlaceInput = document.getElementById("foundPlace");
-      const foundTimeInput = document.getElementById("foundTime");
-      const finderNameInput = document.getElementById("finderName");
-      const submitBtn = lostItemForm ? lostItemForm.querySelector('button[type="submit"]') : null;
-
-      // 모달 요소
-      const detailModal = document.getElementById("detailModal");
-      const modalCloseBtn = document.getElementById("modalCloseBtn");
-      const modalTitle = document.getElementById("modalTitle");
-      const modalTitleInput = document.getElementById("modalTitleInput");
-      const modalImage = document.getElementById("modalImage");
-      const modalImageWrapper = document.getElementById("modalImageWrapper");
-      const modalCategory = document.getElementById("modalCategory");
-      const modalCategoryInput = document.getElementById("modalCategoryInput");
-      const modalStorage = document.getElementById("modalStorage");
-      const modalStorageInput = document.getElementById("modalStorageInput");
-      const modalFoundPlace = document.getElementById("modalFoundPlace");
-      const modalFoundPlaceInput = document.getElementById("modalFoundPlaceInput");
-      const modalFoundTime = document.getElementById("modalFoundTime");
+      const detailModal         = document.getElementById("detailModal");
+      const modalCloseBtn       = document.getElementById("modalCloseBtn");
+      const modalTitle          = document.getElementById("modalTitle");
+      const modalTitleInput     = document.getElementById("modalTitleInput");
+      const modalImage          = document.getElementById("modalImage");
+      const modalImageWrapper   = document.getElementById("modalImageWrapper");
+      const modalCategory       = document.getElementById("modalCategory");
+      const modalCategoryInput  = document.getElementById("modalCategoryInput");
+      const modalStorage        = document.getElementById("modalStorage");
+      const modalStorageInput   = document.getElementById("modalStorageInput");
+      const modalFoundPlace     = document.getElementById("modalFoundPlace");
+      const modalFoundPlaceInput= document.getElementById("modalFoundPlaceInput");
+      const modalFoundTime      = document.getElementById("modalFoundTime");
       const modalFoundTimeInput = document.getElementById("modalFoundTimeInput");
-      const modalFinder = document.getElementById("modalFinder");
-      const modalFinderInput = document.getElementById("modalFinderInput");
-      const modalCreatedAt = document.getElementById("modalCreatedAt");
-      const modalStatus = document.getElementById("modalStatus");
-      const modalOwnerInfoRow = document.getElementById("modalOwnerInfoRow");
-      const modalOwnerInfo = document.getElementById("modalOwnerInfo");
-      const ownerDoneBtn = document.getElementById("ownerDoneBtn");
-      const discardBtn = document.getElementById("discardBtn");
-      const editBtn = document.getElementById("editBtn");
-      const reRegisterBtn = document.getElementById("reRegisterBtn");
+      const modalFinder         = document.getElementById("modalFinder");
+      const modalFinderInput    = document.getElementById("modalFinderInput");
+      const modalCreatedAt      = document.getElementById("modalCreatedAt");
+      const modalStatus         = document.getElementById("modalStatus");
+      const modalOwnerInfoRow   = document.getElementById("modalOwnerInfoRow");
+      const modalOwnerInfo      = document.getElementById("modalOwnerInfo");
+      const ownerDoneBtn        = document.getElementById("ownerDoneBtn");
+      const discardBtn          = document.getElementById("discardBtn");
+      const editBtn             = document.getElementById("editBtn");
+      const reRegisterBtn       = document.getElementById("reRegisterBtn");
 
-      // 인증 UI 요소
+      // ====== 상단 로그인/상태 영역 추가를 위해 동적으로 요소 삽입 ======
+      (function insertAuthRow() {
+        const card = document.querySelector(".card");
+        const searchRow = document.querySelector(".search-row");
+        if (!card || !searchRow) return;
+        const authRow = document.createElement("div");
+        authRow.className = "search-row";
+        authRow.style.marginBottom = "4px";
+
+        const authStatus = document.createElement("div");
+        authStatus.id = "authMessage";
+        authStatus.style.flex = "1";
+        authStatus.style.fontSize = "0.85rem";
+        authStatus.style.color = "#4b5563";
+        authStatus.textContent = "로그인하지 않은 상태입니다.";
+
+        const loginBtn = document.createElement("button");
+        loginBtn.id = "loginBtn";
+        loginBtn.className = "btn btn-outline";
+        loginBtn.textContent = "Google 로그인";
+
+        const logoutBtn = document.createElement("button");
+        logoutBtn.id = "logoutBtn";
+        logoutBtn.className = "btn";
+        logoutBtn.textContent = "로그아웃";
+        logoutBtn.style.display = "none";
+
+        authRow.appendChild(authStatus);
+        authRow.appendChild(loginBtn);
+        authRow.appendChild(logoutBtn);
+
+        card.insertBefore(authRow, searchRow);
+      })();
+
       const authMessage = document.getElementById("authMessage");
-      const loginBtn = document.getElementById("loginBtn");
-      const logoutBtn = document.getElementById("logoutBtn");
+      const loginBtn    = document.getElementById("loginBtn");
+      const logoutBtn   = document.getElementById("logoutBtn");
 
-      // ===== 상태 =====
       let items = [];
       let currentCategory = "전체";
       let currentModalItemId = null;
@@ -931,31 +917,27 @@
       let currentUser = null;
       let isTeacher = false;
 
-      // ===== 인증 처리 =====
       function updateAuthUI() {
-        if (!authMessage || !loginBtn || !logoutBtn || !submitBtn) return;
-
+        const submitBtn = lostItemForm ? lostItemForm.querySelector('button[type="submit"]') : null;
         if (isTeacher && currentUser) {
           authMessage.innerHTML =
-            "<span class=\\"auth-email\\">" +
-            currentUser.email +
-            "</span> (교사용 쓰기 권한)";
+            "<strong>" + currentUser.email + "</strong> (교사용 쓰기 권한)";
           loginBtn.style.display = "none";
           logoutBtn.style.display = "inline-flex";
-          submitBtn.disabled = false;
+          if (submitBtn) submitBtn.disabled = false;
         } else if (currentUser && !isTeacher) {
           authMessage.innerHTML =
-            "<span class=\\"auth-warning\\">" +
-            currentUser.email +
-            " 계정은 쓰기 권한이 없습니다. (@nsworld.net 계정으로 다시 로그인해 주세요.)</span>";
+            "<span style='color:#b91c1c; font-weight:500;'>" +
+            (currentUser.email || "") +
+            "</span><span> 계정은 쓰기 권한이 없습니다. (@nsworld.net 계정으로 다시 로그인해 주세요.)</span>";
           loginBtn.style.display = "inline-flex";
           logoutBtn.style.display = "inline-flex";
-          submitBtn.disabled = true;
+          if (submitBtn) submitBtn.disabled = true;
         } else {
           authMessage.textContent = "로그인하지 않은 상태입니다.";
           loginBtn.style.display = "inline-flex";
           logoutBtn.style.display = "none";
-          submitBtn.disabled = true;
+          if (submitBtn) submitBtn.disabled = true;
         }
       }
 
@@ -996,7 +978,6 @@
         });
       }
 
-      // ===== Edit 모드 전환 =====
       function setEditMode(on) {
         isEditMode = on;
         if (!editBtn) return;
@@ -1004,47 +985,46 @@
         if (on) {
           editBtn.textContent = "수정 내용 저장";
 
-          if (modalTitle) modalTitle.style.display = "none";
-          if (modalTitleInput) modalTitleInput.style.display = "block";
+          modalTitle.style.display = "none";
+          modalTitleInput.style.display = "block";
 
-          if (modalCategory) modalCategory.style.display = "none";
-          if (modalCategoryInput) modalCategoryInput.style.display = "inline-block";
+          modalCategory.style.display = "inline";
+          modalCategoryInput.style.display = "inline-block";
 
-          if (modalStorage) modalStorage.style.display = "none";
-          if (modalStorageInput) modalStorageInput.style.display = "inline-block";
+          modalStorage.style.display = "inline";
+          modalStorageInput.style.display = "inline-block";
 
-          if (modalFoundPlace) modalFoundPlace.style.display = "none";
-          if (modalFoundPlaceInput) modalFoundPlaceInput.style.display = "inline-block";
+          modalFoundPlace.style.display = "none";
+          modalFoundPlaceInput.style.display = "inline-block";
 
-          if (modalFoundTime) modalFoundTime.style.display = "none";
-          if (modalFoundTimeInput) modalFoundTimeInput.style.display = "inline-block";
+          modalFoundTime.style.display = "none";
+          modalFoundTimeInput.style.display = "inline-block";
 
-          if (modalFinder) modalFinder.style.display = "none";
-          if (modalFinderInput) modalFinderInput.style.display = "inline-block";
+          modalFinder.style.display = "none";
+          modalFinderInput.style.display = "inline-block";
         } else {
           editBtn.textContent = "수정하기";
 
-          if (modalTitle) modalTitle.style.display = "block";
-          if (modalTitleInput) modalTitleInput.style.display = "none";
+          modalTitle.style.display = "block";
+          modalTitleInput.style.display = "none";
 
-          if (modalCategory) modalCategory.style.display = "inline";
-          if (modalCategoryInput) modalCategoryInput.style.display = "none";
+          modalCategory.style.display = "inline";
+          modalCategoryInput.style.display = "none";
 
-          if (modalStorage) modalStorage.style.display = "inline";
-          if (modalStorageInput) modalStorageInput.style.display = "none";
+          modalStorage.style.display = "inline";
+          modalStorageInput.style.display = "none";
 
-          if (modalFoundPlace) modalFoundPlace.style.display = "inline";
-          if (modalFoundPlaceInput) modalFoundPlaceInput.style.display = "none";
+          modalFoundPlace.style.display = "inline";
+          modalFoundPlaceInput.style.display = "none";
 
-          if (modalFoundTime) modalFoundTime.style.display = "inline";
-          if (modalFoundTimeInput) modalFoundTimeInput.style.display = "none";
+          modalFoundTime.style.display = "inline";
+          modalFoundTimeInput.style.display = "none";
 
-          if (modalFinder) modalFinder.style.display = "inline";
-          if (modalFinderInput) modalFinderInput.style.display = "none";
+          modalFinder.style.display = "inline";
+          modalFinderInput.style.display = "none";
         }
       }
 
-      // ===== 렌더링 =====
       function renderItems(filterText = "") {
         if (!itemsContainer) return;
         itemsContainer.innerHTML = "";
@@ -1104,15 +1084,15 @@
           const titleRow = document.createElement("div");
           titleRow.className = "item-title-row";
 
-          const titleEl = document.createElement("div");
-          titleEl.className = "item-title";
-          titleEl.textContent = item.title || "분실물";
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = item.title || "분실물";
 
           const status = document.createElement("span");
           status.className = "badge badge-status";
           status.textContent = statusLabel(item);
 
-          titleRow.appendChild(titleEl);
+          titleRow.appendChild(title);
           titleRow.appendChild(status);
 
           const badgesRow = document.createElement("div");
@@ -1135,7 +1115,8 @@
           placeSpan.textContent = "습득 장소: " + (item.foundPlace || "-");
           const timeSpan = document.createElement("span");
           timeSpan.textContent =
-            "습득 시간: " + formatDateTime(item.foundTime || item.createdAt);
+            "습득 시간: " +
+            formatDateTime(item.foundTime || item.createdAt);
           const finderSpan = document.createElement("span");
           finderSpan.textContent = "습득자: " + (item.finderName || "-");
           meta.appendChild(placeSpan);
@@ -1159,7 +1140,6 @@
         });
       }
 
-      // ===== 모달 처리 =====
       function openModal(itemId) {
         if (!detailModal) return;
         const item = items.find((it) => it.id === itemId);
@@ -1168,43 +1148,46 @@
 
         setEditMode(false);
 
-        if (modalTitle) modalTitle.textContent = item.title || "분실물";
-        if (modalTitleInput) modalTitleInput.value = item.title || "";
+        modalTitle.textContent = item.title || "분실물";
+        modalTitleInput.value = item.title || "";
 
-        if (modalImage) modalImage.src = item.imageUrl || "";
-        if (modalCategory) modalCategory.textContent = item.category || "-";
-        if (modalCategoryInput) modalCategoryInput.value = item.category || "기타";
+        modalImage.src = item.imageUrl || "";
+        modalCategory.textContent = item.category || "-";
+        modalCategoryInput.value = item.category || "기타";
 
-        if (modalStorage) modalStorage.textContent = item.storageLocation || "-";
-        if (modalStorageInput) modalStorageInput.value = item.storageLocation || "교무실";
-
-        if (modalFoundPlace) modalFoundPlace.textContent = item.foundPlace || "-";
-        if (modalFoundPlaceInput) modalFoundPlaceInput.value = item.foundPlace || "";
+        modalStorage.textContent = item.storageLocation || "-";
+        modalStorageInput.value = item.storageLocation || "교무실";
 
         const usedTime = item.foundTime || item.createdAt;
-        if (modalFoundTime) modalFoundTime.textContent = formatDateTime(usedTime);
-        if (modalFoundTimeInput)
-          modalFoundTimeInput.value = toLocalDateTimeInputValue(usedTime);
+        modalFoundTime.textContent = formatDateTime(usedTime);
+        modalFoundTimeInput.value = toLocalDateTimeInputValue(usedTime);
 
-        if (modalFinder) modalFinder.textContent = item.finderName || "-";
-        if (modalFinderInput) modalFinderInput.value = item.finderName || "";
+        modalFoundPlace.textContent = item.foundPlace || "-";
+        modalFoundPlaceInput.value = item.foundPlace || "";
 
-        if (modalCreatedAt) modalCreatedAt.textContent = formatDateTime(item.createdAt);
-        if (modalStatus) modalStatus.textContent = statusLabel(item);
+        modalFinder.textContent = item.finderName || "-";
+        modalFinderInput.value = item.finderName || "";
 
-        if (item.ownerInfo && modalOwnerInfoRow && modalOwnerInfo) {
+        modalCreatedAt.textContent = formatDateTime(item.createdAt);
+        modalStatus.textContent = statusLabel(item);
+
+        if (item.ownerInfo) {
           modalOwnerInfoRow.style.display = "block";
           modalOwnerInfo.textContent = item.ownerInfo;
-        } else if (modalOwnerInfoRow && modalOwnerInfo) {
+        } else {
           modalOwnerInfoRow.style.display = "none";
           modalOwnerInfo.textContent = "";
         }
 
-        // 주인 찾기 버튼
-        if (ownerDoneBtn) {
+        if (!isTeacher) {
+          ownerDoneBtn.disabled = true;
+          discardBtn.disabled = true;
+          editBtn.disabled = true;
+          reRegisterBtn.style.display = "none";
+        } else {
           ownerDoneBtn.classList.remove("btn-primary", "btn-disabled");
           if (item.status === "stored") {
-            ownerDoneBtn.disabled = !isTeacher;
+            ownerDoneBtn.disabled = false;
             ownerDoneBtn.textContent = "주인 찾기 완료";
             ownerDoneBtn.classList.add("btn-primary");
           } else if (item.status === "found") {
@@ -1216,17 +1199,14 @@
             ownerDoneBtn.textContent = "주인 찾기 완료";
             ownerDoneBtn.classList.add("btn-disabled");
           }
-        }
 
-        // 폐기 버튼
-        if (discardBtn) {
           const discardAvailable = canDiscard(item);
           discardBtn.classList.remove("btn-danger", "btn-disabled");
           if (item.status === "discarded") {
             discardBtn.disabled = true;
             discardBtn.textContent = "폐기 처리 완료";
             discardBtn.classList.add("btn-danger");
-          } else if (discardAvailable && isTeacher) {
+          } else if (discardAvailable) {
             discardBtn.disabled = false;
             discardBtn.textContent = "폐기 처리";
             discardBtn.classList.add("btn-danger");
@@ -1235,21 +1215,14 @@
             discardBtn.textContent = "폐기 처리";
             discardBtn.classList.add("btn-disabled");
           }
-        }
 
-        // 수정 / 재등록 버튼
-        if (editBtn) {
           if (item.status === "stored") {
-            editBtn.disabled = !isTeacher;
+            editBtn.disabled = false;
+            reRegisterBtn.style.display = "none";
           } else {
             editBtn.disabled = true;
-          }
-        }
-        if (reRegisterBtn) {
-          if (item.status === "found" || item.status === "discarded") {
-            reRegisterBtn.style.display = isTeacher ? "block" : "none";
-          } else {
-            reRegisterBtn.style.display = "none";
+            reRegisterBtn.style.display = "block";
+            if (isEditMode) setEditMode(false);
           }
         }
 
@@ -1275,10 +1248,9 @@
         modalImageWrapper.addEventListener("click", closeModal);
       }
 
-      // ===== 이벤트 바인딩 =====
       if (searchBtn) {
         searchBtn.addEventListener("click", () => {
-          renderItems(searchInput ? searchInput.value : "");
+          renderItems(searchInput.value);
         });
       }
       if (searchInput) {
@@ -1286,14 +1258,12 @@
           if (e.key === "Enter") renderItems(searchInput.value);
         });
       }
-
       if (toggleFormBtn && teacherFormWrapper) {
         toggleFormBtn.addEventListener("click", () => {
           const visible = teacherFormWrapper.style.display === "block";
           teacherFormWrapper.style.display = visible ? "none" : "block";
         });
       }
-
       if (categoryButtons && categoryButtons.length) {
         categoryButtons.forEach((btn) => {
           btn.addEventListener("click", () => {
@@ -1301,41 +1271,46 @@
             categoryButtons.forEach((b) =>
               b.classList.toggle("btn-chip-active", b === btn)
             );
-            renderItems(searchInput ? searchInput.value : "");
+            renderItems(searchInput.value);
           });
         });
       }
 
-      if (lostItemForm && submitBtn) {
+      if (lostItemForm) {
         lostItemForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           if (!isTeacher || !currentUser) {
             alert("@nsworld.net 교사 계정으로 로그인 후 등록할 수 있습니다.");
             return;
           }
-          if (!imageInput || !imageInput.files || !imageInput.files[0]) {
+          if (!imageInput.files || !imageInput.files[0]) {
             alert("분실물 사진을 반드시 업로드해 주세요.");
             return;
           }
-          if (!foundPlaceInput || !foundPlaceInput.value.trim()) {
+          if (!foundPlaceInput.value.trim()) {
             alert("습득 장소를 입력해 주세요.");
-            if (foundPlaceInput) foundPlaceInput.focus();
+            foundPlaceInput.focus();
             return;
           }
 
-          const file = imageInput.files[0];
-          submitBtn.disabled = true;
-          const originalText = submitBtn.textContent;
-          submitBtn.textContent = "등록 중...";
+          const submitBtn = lostItemForm.querySelector('button[type="submit"]');
+          let originalText = "등록하기";
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            originalText = submitBtn.textContent;
+            submitBtn.textContent = "등록 중...";
+          }
 
           try {
+            const file = imageInput.files[0];
             const imageUrl = await uploadToImgBB(file);
-            const title = titleInput ? titleInput.value.trim() : "";
-            const category = categorySelect ? categorySelect.value : "기타";
-            const storageLocation = storageSelect ? storageSelect.value : "교무실";
-            const foundPlace = foundPlaceInput ? foundPlaceInput.value.trim() : "";
-            const foundTimeVal = foundTimeInput ? foundTimeInput.value : "";
-            const finderName = finderNameInput ? finderNameInput.value.trim() : "";
+
+            const title = titleInput.value.trim();
+            const category = categorySelect.value;
+            const storageLocation = storageSelect.value;
+            const foundPlace = foundPlaceInput.value.trim();
+            const foundTimeVal = foundTimeInput.value;
+            const finderName = finderNameInput.value.trim();
 
             let foundTimeTs = null;
             if (foundTimeVal) {
@@ -1364,8 +1339,10 @@
             console.error("등록 오류:", err);
             alert("분실물 등록 중 오류가 발생했습니다.");
           } finally {
-            submitBtn.disabled = !isTeacher;
-            submitBtn.textContent = originalText;
+            if (submitBtn) {
+              submitBtn.disabled = !isTeacher;
+              submitBtn.textContent = originalText;
+            }
           }
         });
       }
@@ -1380,9 +1357,7 @@
           const item = items.find((it) => it.id === currentModalItemId);
           if (!item || item.status !== "stored") return;
 
-          const info = prompt(
-            "수령 학생 정보 입력\\n예) 4학년 1반 10번 홍길동"
-          );
+          const info = prompt("수령 학생 정보 입력\n예) 4학년 1반 10번 홍길동");
           if (!info || !info.trim()) return;
 
           try {
@@ -1445,27 +1420,21 @@
             return;
           }
 
-          const newTitle = modalTitleInput ? modalTitleInput.value.trim() : "";
-          const newCategory = modalCategoryInput ? modalCategoryInput.value : "기타";
-          const newStorage = modalStorageInput ? modalStorageInput.value : "교무실";
-          const newFoundPlace = modalFoundPlaceInput
-            ? modalFoundPlaceInput.value.trim()
-            : "";
-          const newFoundTimeVal = modalFoundTimeInput
-            ? modalFoundTimeInput.value
-            : "";
-          const newFinderName = modalFinderInput
-            ? modalFinderInput.value.trim()
-            : "";
+          const newTitle = modalTitleInput.value.trim();
+          const newCategory = modalCategoryInput.value;
+          const newStorage = modalStorageInput.value;
+          const newFoundPlace = modalFoundPlaceInput.value.trim();
+          const newFoundTimeVal = modalFoundTimeInput.value;
+          const newFinderName = modalFinderInput.value.trim();
 
           if (!newTitle) {
             alert("분실물 이름 / 설명을 입력해 주세요.");
-            if (modalTitleInput) modalTitleInput.focus();
+            modalTitleInput.focus();
             return;
           }
           if (!newFoundPlace) {
             alert("습득 장소를 입력해 주세요.");
-            if (modalFoundPlaceInput) modalFoundPlaceInput.focus();
+            modalFoundPlaceInput.focus();
             return;
           }
 
@@ -1508,9 +1477,7 @@
           if (!item) return;
           if (item.status !== "found" && item.status !== "discarded") return;
 
-          const ok = confirm(
-            "이 물품을 다시 '보관 중' 상태로 변경하시겠습니까?\\n(분실물 목록에 다시 표시됩니다.)"
-          );
+          const ok = confirm("이 물품을 다시 '보관 중' 상태로 변경하시겠습니까?");
           if (!ok) return;
 
           try {
@@ -1526,7 +1493,6 @@
         });
       }
 
-      // ===== Firestore 실시간 구독 =====
       db.collection("lost_items")
         .orderBy("createdAt", "desc")
         .onSnapshot(
@@ -1555,8 +1521,8 @@
           }
         );
 
-      // 초기 렌더링
-      renderItems();
+      renderItems("");
+      updateAuthUI();
     });
   </script>
 </body>
