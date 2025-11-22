@@ -2,255 +2,360 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>남성초등학교 분실물 센터 (학생용)</title>
+  <title>남성초등학교 분실물 센터 - 학생용</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; }
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
-      background: #f3f4f6;
-      color: #111827;
-      padding: 16px;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #f3f5fb;
+      color: #333;
     }
     .page {
-      max-width: 960px;
+      max-width: 1200px;
       margin: 0 auto;
-    }
-    header {
-      margin-bottom: 16px;
-    }
-    header h1 {
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    header p {
-      font-size: 0.9rem;
-      color: #6b7280;
+      padding: 16px;
     }
     .card {
       background: #ffffff;
       border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
-      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      padding: 16px 20px;
     }
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header-logo {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 8px;
+    }
+    header h1 {
+      margin: 8px 0 4px;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #2563eb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
     .notice-box {
       background: #fff7c2;
       border-radius: 8px;
       padding: 10px 12px;
+      margin-bottom: 12px;
       border: 1px solid #fde68a;
-      margin-bottom: 10px;
-      font-size: 0.85rem;
-      color: #6b7280;
     }
-    #itemsContainer {
+    .notice-box p.notice { font-size: 1rem; font-weight: 700; }
+
+    .search-row {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .search-row input[type="text"] {
+      flex: 1 1 200px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid #cbd5f5;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .search-row input[type="text"]:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+
+    .cat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .btn-chip {
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #4b5563;
+      cursor: pointer;
+    }
+    .btn-chip-active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #e0f2fe;
+      color: #0369a1;
+      margin-right: 4px;
+    }
+    .storage-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #e0edff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-left: 4px;
+      cursor: default;
+    }
+
+    #itemsContainer {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
     }
     .item-card {
-      display: flex;
-      gap: 10px;
-      padding: 8px;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
       background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
       cursor: pointer;
-      transition: box-shadow 0.15s ease, transform 0.1s ease;
     }
     .item-card:hover {
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
       transform: translateY(-1px);
     }
-    .item-thumb {
-      width: 90px;
-      height: 90px;
-      border-radius: 8px;
+    .item-image-wrapper {
+      width: 100%;
+      padding-top: 60%;
+      position: relative;
       overflow: hidden;
-      flex-shrink: 0;
       background: #e5e7eb;
     }
-    .item-thumb img {
+    .item-image-wrapper img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
     .item-body {
-      flex: 1;
+      padding: 10px 12px 12px;
       font-size: 0.85rem;
     }
     .item-title {
       font-weight: 600;
       font-size: 0.95rem;
-      margin-bottom: 2px;
+      color: #0f172a;
+      margin-bottom: 4px;
     }
     .item-meta {
-      color: #4b5563;
-      line-height: 1.4;
-    }
-    .item-footer {
       margin-top: 4px;
+      line-height: 1.4;
+      color: #4b5563;
+    }
+    .item-meta span { display: block; }
+    .item-footer {
+      margin-top: 6px;
       font-size: 0.75rem;
       color: #9ca3af;
     }
+
     .empty-message {
       text-align: center;
-      padding: 12px;
-      font-size: 0.9rem;
+      padding: 16px;
       color: #9ca3af;
+      font-size: 0.9rem;
     }
 
-    /* 팝업 모달 */
-    .modal-backdrop {
+    .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.45);
+      background: rgba(15, 23, 42, 0.55);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 9999;
+      padding: 16px;
+      z-index: 50;
     }
     .modal {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 16px;
+      max-width: 840px;
       width: 100%;
-      max-width: 420px;
       max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 25px 50px rgba(15, 23, 42, 0.35);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
-      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
     }
-    .modal-header h3 {
+    .modal-title {
       font-size: 1rem;
+      font-weight: 600;
+      color: #0f172a;
     }
     .modal-close {
       border: none;
       background: transparent;
+      font-size: 1.2rem;
       cursor: pointer;
-      font-size: 1.1rem;
-      padding: 4px;
       color: #6b7280;
     }
+    .modal-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
     .modal-image {
-      width: 100%;
-      border-radius: 10px;
-      background: #e5e7eb;
+      flex: 1;
+      max-height: 380px;
       overflow: hidden;
-      margin-bottom: 8px;
+      background: #e5e7eb;
+      cursor: pointer;
     }
     .modal-image img {
       width: 100%;
-      height: auto;
-      display: block;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
     }
+    .modal-body {
+      padding: 12px 16px 16px;
+      font-size: 0.9rem;
+    }
+    .modal-body p { margin: 4px 0; }
     .modal-meta {
-      font-size: 0.85rem;
-      color: #4b5563;
+      margin-top: 4px;
       line-height: 1.5;
+      color: #4b5563;
     }
-    .modal-meta div {
-      margin-bottom: 2px;
+
+    @media (min-width: 768px) {
+      header h1 { font-size: 2.4rem; }
+      #itemsContainer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .modal-content { flex-direction: row; }
+      .modal-image { width: 45%; max-height: none; }
+      .modal-body { width: 55%; }
     }
-    .modal-footer-text {
-      margin-top: 8px;
-      font-size: 0.8rem;
-      color: #6b7280;
+    @media (min-width: 1024px) {
+      #itemsContainer { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
   </style>
 </head>
 <body>
   <div class="page">
     <header>
-      <h1>남성초등학교 분실물 센터 (학생용)</h1>
-      <p>분실물을 한 눈에 확인하고, 자신의 물건을 찾아가세요.</p>
+      <img src="https://nisb.kr/plugins/custom_plugin/simple_page/assets/img/branding/logo4.png?date_ver=2025-11" alt="남성초등학교 로고" class="header-logo" />
+      <h1>남성초등학교 분실물 센터</h1>
+      <p>분실물을 한 눈에 확인하고, 잃어버린 물건을 찾아가세요!</p>
     </header>
 
     <div class="card">
       <div class="notice-box">
-        <p>※ 이 페이지에서는 분실물 조회만 가능합니다.</p>
-        <p>※ 자신의 물건이 보이면, 표시된 보관 장소로 가서 선생님께 말씀하세요.</p>
-        <p>※ 카드를 누르면 사진과 정보를 크게 볼 수 있습니다.</p>
+        <p class="notice">※ 이 페이지에서는 분실물 조회만 가능합니다.</p>
+        <p class="notice">※ 물건 보관 후 한 달이 지나면 물품을 폐기처리합니다.</p>
+        <p class="notice">※ 자신의 물건이 보일 경우 보관 장소에 방문하여 물건을 찾아가 주세요.</p>
       </div>
+
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="분실물 검색 (종류, 장소, 설명 등)" />
+        <button class="btn btn-primary" id="searchBtn">검색</button>
+      </div>
+
+      <div class="cat-row" id="categoryButtons">
+        <button class="btn-chip btn-chip-active" data-category="전체">전체</button>
+        <button class="btn-chip" data-category="의류/가방">의류/가방</button>
+        <button class="btn-chip" data-category="학용품">학용품</button>
+        <button class="btn-chip" data-category="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</button>
+        <button class="btn-chip" data-category="물병/텀블러">물병/텀블러</button>
+        <button class="btn-chip" data-category="열쇠/악세사리">열쇠/악세사리</button>
+        <button class="btn-chip" data-category="기타">기타</button>
+      </div>
+
       <div id="itemsContainer"></div>
-      <div
-        id="emptyMessage"
-        class="empty-message"
-        style="display:none;"
-      >
+      <div id="emptyMessage" class="empty-message" style="display:none;">
         현재 보관 중인 분실물이 없습니다.
       </div>
     </div>
   </div>
 
-  <!-- 상세 팝업 -->
-  <div class="modal-backdrop" id="studentModalBackdrop">
+  <div class="modal-overlay" id="detailModal">
     <div class="modal">
       <div class="modal-header">
-        <h3 id="studentModalTitle">분실물 상세 보기</h3>
-        <button
-          class="modal-close"
-          id="studentModalCloseBtn"
-          aria-label="닫기"
-        >
-          ✕
-        </button>
+        <div class="modal-title" id="modalTitle"></div>
+        <button class="modal-close" id="modalCloseBtn" aria-label="닫기">×</button>
       </div>
-      <div class="modal-image">
-        <img id="studentModalImage" alt="분실물 이미지" />
-      </div>
-      <div class="modal-meta" id="studentModalMeta"></div>
-      <div class="modal-footer-text">
-        이 물건이 내 것 같으면, 보관 장소로 가서 담당 선생님께 꼭
-        이야기하세요.
+      <div class="modal-content">
+        <div class="modal-image" id="modalImageWrapper">
+          <img id="modalImage" alt="분실물 이미지" />
+        </div>
+        <div class="modal-body">
+          <div class="modal-meta">
+            <p><strong>카테고리:</strong> <span id="modalCategory"></span></p>
+            <p><strong>보관 장소:</strong> <span id="modalStorage" class="storage-badge"></span></p>
+            <p><strong>습득 장소:</strong> <span id="modalFoundPlace"></span></p>
+            <p><strong>습득 시간:</strong> <span id="modalFoundTime"></span></p>
+            <p><strong>습득자:</strong> <span id="modalFinder"></span></p>
+            <p><strong>등록일:</strong> <span id="modalCreatedAt"></span></p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
 
   <script>
-    // ===== Firebase 초기화 (교사용과 동일한 프로젝트로 설정) =====
     const firebaseConfig = {
-      apiKey: "AIzaSyDyp8MRjZUwZZxBMUZBDpCqYac2TaMIO5M",
-      authDomain: "nsmissingt-e9fbf.firebaseapp.com",
-      projectId: "nsmissingt-e9fbf",
-      storageBucket: "nsmissingt-e9fbf.firebasestorage.app",
-      messagingSenderId: "163980342864",
-      appId: "1:163980342864:web:e699b4d11af04752cd0355"
+      apiKey: "AIzaSyC2Di2seSL1SY4PghoVlY5aqGMkEwhaPgA",
+      authDomain: "nsmissingt.firebaseapp.com",
+      projectId: "nsmissingt",
+      storageBucket: "nsmissingt.firebasestorage.app",
+      messagingSenderId: "648041982970",
+      appId: "1:648041982970:web:384d5575410acb5ad95243"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const itemsContainer = document.getElementById("itemsContainer");
-    const emptyMessage = document.getElementById("emptyMessage");
-
-    const modalBackdrop = document.getElementById(
-      "studentModalBackdrop"
-    );
-    const modalCloseBtn = document.getElementById(
-      "studentModalCloseBtn"
-    );
-    const modalTitle = document.getElementById("studentModalTitle");
-    const modalImage = document.getElementById("studentModalImage");
-    const modalMeta = document.getElementById("studentModalMeta");
-
-    let items = [];
-    let unsubscribe = null;
+    function normalizeTs(value) {
+      if (!value) return "";
+      if (typeof value === "string") return value;
+      if (value.toDate) return value.toDate().toISOString();
+      return "";
+    }
 
     function formatDateTime(isoString) {
       if (!isoString) return "-";
@@ -261,132 +366,168 @@
       const day = String(d.getDate()).padStart(2, "0");
       const hh = String(d.getHours()).padStart(2, "0");
       const mm = String(d.getMinutes()).padStart(2, "0");
-      return `${y}. ${m}. ${day}. ${hh}:${mm}`;
+      return y + ". " + m + ". " + day + ". " + hh + ":" + mm;
     }
 
-    function subscribeItems() {
-      if (unsubscribe) unsubscribe();
-      unsubscribe = db
-        .collection("lost_items")
-        .orderBy("createdAt", "desc")
-        .onSnapshot(
-          (snapshot) => {
-            items = snapshot.docs
-              .map((doc) => {
-                const data = doc.data() || {};
-                return {
-                  id: doc.id,
-                  title: data.title || "",
-                  category: data.category || "기타",
-                  storageLocation: data.storageLocation || "",
-                  foundPlace: data.foundPlace || "",
-                  foundTime: data.foundTime || "",
-                  finderName: data.finderName || "",
-                  createdAt: data.createdAt || "",
-                  imageUrl: data.imageUrl || "",
-                  status: data.status || "stored"
-                };
-              })
-              .filter((it) => !it.status || it.status === "stored");
-            renderItems();
-          },
-          (error) => {
-            console.error("분실물 불러오기 오류:", error);
-          }
-        );
-    }
+    let items = [];
+    const itemsContainer = document.getElementById("itemsContainer");
+    const emptyMessage = document.getElementById("emptyMessage");
+    const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const categoryButtons = document.querySelectorAll("#categoryButtons .btn-chip");
 
-    function renderItems() {
+    const detailModal = document.getElementById("detailModal");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalImage = document.getElementById("modalImage");
+    const modalImageWrapper = document.getElementById("modalImageWrapper");
+    const modalCategory = document.getElementById("modalCategory");
+    const modalStorage = document.getElementById("modalStorage");
+    const modalFoundPlace = document.getElementById("modalFoundPlace");
+    const modalFoundTime = document.getElementById("modalFoundTime");
+    const modalFinder = document.getElementById("modalFinder");
+    const modalCreatedAt = document.getElementById("modalCreatedAt");
+
+    let currentCategory = "전체";
+
+    function renderItems(filterText) {
       itemsContainer.innerHTML = "";
-      if (!items.length) {
+      let list = items.slice();
+
+      list.sort((a,b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+      if (filterText && filterText.trim()) {
+        const q = filterText.trim().toLowerCase();
+        list = list.filter((item) => {
+          const fields = [item.title, item.category, item.storageLocation, item.foundPlace, item.finderName];
+          return fields.some((f) => (f || "").toLowerCase().includes(q));
+        });
+      }
+
+      list = list.filter((item) => !item.status || item.status === "stored");
+      if (currentCategory !== "전체") {
+        list = list.filter((item) => item.category === currentCategory);
+      }
+
+      if (!list.length) {
         emptyMessage.style.display = "block";
         return;
       }
       emptyMessage.style.display = "none";
 
-      items.forEach((item) => {
+      list.forEach((item) => {
         const card = document.createElement("div");
         card.className = "item-card";
-        card.dataset.id = item.id;
 
-        const thumb = document.createElement("div");
-        thumb.className = "item-thumb";
+        const imgWrap = document.createElement("div");
+        imgWrap.className = "item-image-wrapper";
         const img = document.createElement("img");
-        img.alt = item.title || "분실물 이미지";
         img.src = item.imageUrl || "";
-        thumb.appendChild(img);
+        img.alt = item.title || "분실물 이미지";
+        imgWrap.appendChild(img);
 
         const body = document.createElement("div");
         body.className = "item-body";
 
-        const titleEl = document.createElement("div");
-        titleEl.className = "item-title";
-        titleEl.textContent = item.title || "분실물";
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = item.title || "분실물";
+
+        const badgesRow = document.createElement("div");
+        if (item.category) {
+          const cat = document.createElement("span");
+          cat.className = "badge";
+          cat.textContent = item.category;
+          badgesRow.appendChild(cat);
+        }
+        if (item.storageLocation) {
+          const loc = document.createElement("span");
+          loc.className = "badge";
+          loc.textContent = "보관: " + item.storageLocation;
+          badgesRow.appendChild(loc);
+        }
 
         const meta = document.createElement("div");
         meta.className = "item-meta";
-        meta.innerHTML = `
-          <div>카테고리: ${item.category || "-"}</div>
-          <div>보관 장소: ${item.storageLocation || "-"}</div>
-          <div>습득 장소: ${item.foundPlace || "-"}</div>
-          <div>습득 시간: ${formatDateTime(
-            item.foundTime || item.createdAt
-          )}</div>
-        `;
+        const placeSpan = document.createElement("span");
+        placeSpan.textContent = "습득 장소: " + (item.foundPlace || "-");
+        const timeSpan = document.createElement("span");
+        timeSpan.textContent = "습득 시간: " + formatDateTime(item.foundTime || item.createdAt);
+        const finderSpan = document.createElement("span");
+        finderSpan.textContent = "습득자: " + (item.finderName || "-");
+        meta.appendChild(placeSpan);
+        meta.appendChild(timeSpan);
+        meta.appendChild(finderSpan);
 
         const footer = document.createElement("div");
         footer.className = "item-footer";
-        footer.textContent =
-          "등록일: " + formatDateTime(item.createdAt);
+        footer.textContent = "등록일: " + formatDateTime(item.createdAt);
 
-        body.appendChild(titleEl);
+        body.appendChild(title);
+        body.appendChild(badgesRow);
         body.appendChild(meta);
         body.appendChild(footer);
 
-        card.appendChild(thumb);
+        card.appendChild(imgWrap);
         card.appendChild(body);
-
-        card.addEventListener("click", () => openStudentModal(item.id));
+        card.addEventListener("click", () => openModal(item));
 
         itemsContainer.appendChild(card);
       });
     }
 
-    function openStudentModal(itemId) {
-      const item = items.find((it) => it.id === itemId);
-      if (!item) return;
-      modalTitle.textContent = item.title || "분실물 상세 보기";
+    function openModal(item) {
+      modalTitle.textContent = item.title || "분실물";
       modalImage.src = item.imageUrl || "";
-      modalImage.alt = item.title || "분실물 이미지";
-      modalMeta.innerHTML = `
-        <div><strong>카테고리</strong> : ${item.category || "-"}</div>
-        <div><strong>보관 장소</strong> : ${
-          item.storageLocation || "-"
-        }</div>
-        <div><strong>습득 장소</strong> : ${
-          item.foundPlace || "-"
-        }</div>
-        <div><strong>습득 시간</strong> : ${formatDateTime(
-          item.foundTime || item.createdAt
-        )}</div>
-        <div><strong>등록일</strong> : ${formatDateTime(
-          item.createdAt
-        )}</div>
-      `;
-      modalBackdrop.style.display = "flex";
+      modalCategory.textContent = item.category || "-";
+      modalStorage.textContent = item.storageLocation || "-";
+      modalFoundPlace.textContent = item.foundPlace || "-";
+      modalFoundTime.textContent = formatDateTime(item.foundTime || item.createdAt);
+      modalFinder.textContent = item.finderName || "-";
+      modalCreatedAt.textContent = formatDateTime(item.createdAt);
+      detailModal.style.display = "flex";
     }
 
-    function closeStudentModal() {
-      modalBackdrop.style.display = "none";
+    function closeModal() {
+      detailModal.style.display = "none";
     }
 
-    modalCloseBtn.addEventListener("click", closeStudentModal);
-    modalBackdrop.addEventListener("click", (e) => {
-      if (e.target === modalBackdrop) closeStudentModal();
+    searchBtn.addEventListener("click", () => renderItems(searchInput.value));
+    searchInput.addEventListener("keyup", (e) => { if (e.key === "Enter") renderItems(searchInput.value); });
+
+    categoryButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentCategory = btn.dataset.category;
+        categoryButtons.forEach((b) => b.classList.toggle("btn-chip-active", b === btn));
+        renderItems(searchInput.value);
+      });
     });
 
-    // 처음 로딩 시 구독 시작
-    subscribeItems();
+    modalCloseBtn.addEventListener("click", closeModal);
+    detailModal.addEventListener("click", (e) => { if (e.target === detailModal) closeModal(); });
+    modalImageWrapper.addEventListener("click", closeModal);
+
+    db.collection("lost_items").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+      items = snapshot.docs.map((doc) => {
+        const data = doc.data() || {};
+        return {
+          id: doc.id,
+          title: data.title || "",
+          category: data.category || "기타",
+          storageLocation: data.storageLocation || "",
+          foundPlace: data.foundPlace || "",
+          foundTime: normalizeTs(data.foundTime),
+          finderName: data.finderName || "",
+          createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
+          imageUrl: data.imageUrl || "",
+          status: data.status || "stored"
+        };
+      });
+      renderItems(searchInput.value);
+    }, (err) => {
+      console.error("분실물 불러오기 오류:", err);
+      alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+    });
   </script>
 </body>
 </html>
