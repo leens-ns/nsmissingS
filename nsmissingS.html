@@ -338,6 +338,9 @@
       <div id="emptyMessage" class="empty-message" style="display:none;">
         현재 보관 중인 분실물이 없습니다.
       </div>
+      <button id="loadMoreBtn" class="btn btn-primary" style="margin:12px auto 0; display:none; width:100%;">
+        더 보기
+      </button>
     </div>
   </div>
 
@@ -403,12 +406,16 @@ const firebaseConfig = {
 
     let items = [];
     let currentCategory = "전체";
+    let lastVisible = null;
+    let isLoading = false;
+    const PAGE_SIZE = 5;
 
     const itemsContainer = document.getElementById("itemsContainer");
     const emptyMessage = document.getElementById("emptyMessage");
     const searchInput = document.getElementById("searchInput");
     const searchBtn = document.getElementById("searchBtn");
     const categoryButtons = document.querySelectorAll("#categoryButtons .btn-chip");
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
 
     const detailModal = document.getElementById("detailModal");
     const modalCloseBtn = document.getElementById("modalCloseBtn");
@@ -461,6 +468,7 @@ const firebaseConfig = {
         const imgWrap = document.createElement("div");
         imgWrap.className = "item-image-wrapper";
         const img = document.createElement("img");
+        img.loading = "lazy";
         img.src = item.imageUrl || "";
         img.alt = item.title || "분실물 이미지";
         imgWrap.appendChild(img);
@@ -556,38 +564,66 @@ const firebaseConfig = {
     });
     modalImageWrapper.addEventListener("click", closeModal);
 
-    // Firestore에서 상태가 stored인 것만 읽기
-    db.collection("lost_items")
-      .orderBy("createdAt", "desc")
-      .onSnapshot(
-        (snapshot) => {
-          items = snapshot.docs
-            .map((doc) => {
-              const data = doc.data() || {};
-              return {
-                id: doc.id,
-                title: data.title || "",
-                category: data.category || "기타",
-                storageLocation: data.storageLocation || "",
-                foundPlace: data.foundPlace || "",
-                foundTime: normalizeTs(data.foundTime),
-                finderName: data.finderName || "",
-                createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
-                imageUrl: data.imageUrl || "",
-                status: data.status || "stored"
-              };
-            })
-            .filter((it) => it.status === "stored");
-          renderItems(searchInput.value);
-        },
-        (err) => {
-          console.error("분실물 불러오기 오류:", err);
-          alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+    async function loadItems(isInitial = false) {
+      if (isLoading) return;
+      isLoading = true;
+      try {
+        let query = db.collection("lost_items")
+          .orderBy("createdAt", "desc")
+          .limit(PAGE_SIZE);
+        if (!isInitial && lastVisible) {
+          query = query.startAfter(lastVisible);
         }
-      );
+        const snapshot = await query.get();
 
-    // 초기 렌더링
-    renderItems();
+        if (isInitial) {
+          items = [];
+        }
+        if (!snapshot.empty) {
+          snapshot.docs.forEach((doc) => {
+            const data = doc.data() || {};
+            const item = {
+              id: doc.id,
+              title: data.title || "",
+              category: data.category || "기타",
+              storageLocation: data.storageLocation || "",
+              foundPlace: data.foundPlace || "",
+              foundTime: normalizeTs(data.foundTime),
+              finderName: data.finderName || "",
+              createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
+              imageUrl: data.imageUrl || "",
+              status: data.status || "stored"
+            };
+            if (item.status === "stored") {
+              items.push(item);
+            }
+          });
+          lastVisible = snapshot.docs[snapshot.docs.length - 1];
+        }
+
+        if (snapshot.empty || snapshot.docs.length < PAGE_SIZE) {
+          if (loadMoreBtn) loadMoreBtn.style.display = "none";
+        } else {
+          if (loadMoreBtn) loadMoreBtn.style.display = "block";
+        }
+
+        renderItems(searchInput.value);
+      } catch (err) {
+        console.error("분실물 불러오기 오류:", err);
+        alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener("click", () => {
+        loadItems(false);
+      });
+    }
+
+    // 초기 1페이지 로드
+    loadItems(true);
   </script>
 </body>
 </html>
