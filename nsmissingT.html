@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>남성초등학교 분실물 센터 - 교사용</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #f3f5fb;
+      color: #333;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header-logo {
+      max-width: 180px;
+      height: auto;
+      margin-bottom: 8px;
+    }
+    header h1 {
+      margin: 4px 0 2px;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #2563eb;
+    }
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+    #authBar {
+      text-align: right;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+    #authBar button {
+      margin-left: 4px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    #loginBtn { background:#2563eb; color:#fff; }
+    #logoutBtn { background:#e5e7eb; color:#374151; }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+    label {
+      display:block;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color:#475569;
+    }
+    input[type="text"],
+    input[type="datetime-local"],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5f5;
+      font-size: 0.9rem;
+      outline: none;
+      background:#f9fafb;
+    }
+    input[type="file"] {
+      width: 100%;
+      font-size: 0.85rem;
+    }
+    input[type="text"]:focus,
+    input[type="datetime-local"]:focus,
+    select:focus {
+      border-color:#2563eb;
+      background:#ffffff;
+      box-shadow:0 0 0 2px rgba(37,99,235,0.15);
+    }
+    .btn {
+      border:none;
+      border-radius:999px;
+      padding:8px 14px;
+      font-size:0.9rem;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+    }
+    .btn-primary { background:#2563eb; color:#fff; }
+    .btn-danger { background:#ef4444; color:#fff; }
+    .btn-secondary { background:#e5e7eb; color:#374151; }
+    .form-row-2 {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap:10px;
+    }
+    #teacherFormWrapper {
+      display:none;
+    }
+    #itemsContainer {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .item-card {
+      display:flex;
+      gap:10px;
+      padding:8px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#ffffff;
+    }
+    .item-thumb {
+      width:90px;
+      height:90px;
+      border-radius:8px;
+      overflow:hidden;
+      flex-shrink:0;
+      background:#e5e7eb;
+    }
+    .item-thumb img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+    .item-body {
+      flex:1;
+      font-size:0.85rem;
+    }
+    .item-title {
+      font-weight:600;
+      font-size:0.95rem;
+      margin-bottom:2px;
+    }
+    .item-meta {
+      color:#4b5563;
+      line-height:1.4;
+    }
+    .item-footer {
+      margin-top:4px;
+      font-size:0.75rem;
+      color:#9ca3af;
+    }
+    .item-actions {
+      margin-top:6px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+    .badge-status {
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:0.7rem;
+      margin-left:4px;
+    }
+    .status-stored { background:#dcfce7; color:#166534; }
+    .status-found { background:#fee2e2; color:#b91c1c; }
+    .empty-message {
+      text-align:center;
+      padding:12px;
+      font-size:0.9rem;
+      color:#9ca3af;
+    }
+    .notice {
+      font-size:0.8rem;
+      color:#6b7280;
+      margin-top:4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div id="authBar">
+      <span id="userInfo">로그인하지 않음</span>
+      <button id="loginBtn">구글 로그인</button>
+      <button id="logoutBtn" style="display:none;">로그아웃</button>
+    </div>
+    <header>
+      <h1>남성초등학교 분실물 센터 (교사용)</h1>
+      <p>교사는 분실물을 등록·관리하고, 학생은 조회용 페이지에서 확인합니다.</p>
+    </header>
+
+    <div class="card" id="teacherFormWrapper">
+      <h2>분실물 등록</h2>
+      <p class="notice">※ @nsworld.net 교사 계정으로 로그인한 경우에만 등록할 수 있습니다.</p>
+      <form id="lostItemForm">
+        <label for="itemImage">분실물 사진 (필수)</label>
+        <input type="file" id="itemImage" accept="image/*" required />
+
+        <label for="itemTitle">분실물 이름 / 설명 (필수)</label>
+        <input type="text" id="itemTitle" placeholder="예: 회색 후리스 집업, 검정 텀블러" required />
+
+        <div class="form-row-2">
+          <div>
+            <label for="itemCategory">분실물 종류</label>
+            <select id="itemCategory">
+              <option value="기타">기타</option>
+              <option value="의류/가방">의류/가방</option>
+              <option value="학용품">학용품</option>
+              <option value="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</option>
+              <option value="물병/텀블러">물병/텀블러</option>
+              <option value="열쇠/악세사리">열쇠/악세사리</option>
+            </select>
+          </div>
+          <div>
+            <label for="storageLocation">보관 장소</label>
+            <select id="storageLocation">
+              <option value="교무실">교무실</option>
+              <option value="행정실">행정실</option>
+              <option value="보건실">보건실</option>
+              <option value="상담실">상담실</option>
+              <option value="가온누리 앞">가온누리 앞</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="foundPlace">습득 장소 (필수)</label>
+        <input type="text" id="foundPlace" placeholder="예: 운동장, 4-1 교실, 강당" required />
+
+        <div class="form-row-2">
+          <div>
+            <label for="foundTime">습득 시간 (선택)</label>
+            <input type="datetime-local" id="foundTime" />
+          </div>
+          <div>
+            <label for="finderName">습득자 성명 (선택)</label>
+            <input type="text" id="finderName" placeholder="예: 4-1 홍길동 / 3학년 교사" />
+          </div>
+        </div>
+
+        <div style="margin-top:10px; text-align:right;">
+          <button type="reset" class="btn btn-secondary">초기화</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">등록</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>분실물 목록</h2>
+      <p class="notice">※ 실시간으로 Firestore에서 불러옵니다. (모든 기기에서 동일하게 보임)</p>
+      <div id="itemsContainer"></div>
+      <div id="emptyMessage" class="empty-message" style="display:none;">
+        아직 등록된 분실물이 없습니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs (Compat 버전) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2Di2seSL1SY4PghoVlY5aqGMkEwhaPgA",
+      authDomain: "nsmissingt.firebaseapp.com",
+      projectId: "nsmissingt",
+      storageBucket: "nsmissingt.firebasestorage.app",
+      messagingSenderId: "648041982970",
+      appId: "1:648041982970:web:384d5575410acb5ad95243"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const IMGBB_API_KEY = "b6eac487cb547bc827cef84b2fbbd7c7";
+
+    const userInfoEl = document.getElementById("userInfo");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const teacherFormWrapper = document.getElementById("teacherFormWrapper");
+
+    const lostItemForm = document.getElementById("lostItemForm");
+    const itemImageInput = document.getElementById("itemImage");
+    const itemTitleInput = document.getElementById("itemTitle");
+    const itemCategorySelect = document.getElementById("itemCategory");
+    const storageLocationSelect = document.getElementById("storageLocation");
+    const foundPlaceInput = document.getElementById("foundPlace");
+    const foundTimeInput = document.getElementById("foundTime");
+    const finderNameInput = document.getElementById("finderName");
+    const submitBtn = document.getElementById("submitBtn");
+
+    const itemsContainer = document.getElementById("itemsContainer");
+    const emptyMessage = document.getElementById("emptyMessage");
+
+    let currentUser = null;
+    let isTeacher = false;
+    let items = [];
+    let unsubscribeItems = null;
+
+    function statusLabel(item) {
+      if (!item.status || item.status === "stored") return "보관 중";
+      if (item.status === "found") return "주인 찾음";
+      return item.status;
+    }
+
+    function formatDateTime(isoString) {
+      if (!isoString) return "-";
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) return "-";
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      return `${y}. ${m}. ${day}. ${hh}:${mm}`;
+    }
+
+    function updateAuthUI() {
+      if (!currentUser) {
+        userInfoEl.textContent = "로그인하지 않음";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        teacherFormWrapper.style.display = "none";
+      } else {
+        const email = currentUser.email || "";
+        isTeacher = email.endsWith("@nsworld.net");
+        userInfoEl.textContent = email + (isTeacher ? " (교사)" : " (권한 없음)");
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        teacherFormWrapper.style.display = isTeacher ? "block" : "none";
+      }
+      renderItems();
+    }
+
+    loginBtn.addEventListener("click", () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      auth.signInWithPopup(provider).catch(err => {
+        console.error(err);
+        alert("로그인 중 오류가 발생했습니다.");
+      });
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      auth.signOut().catch(err => {
+        console.error(err);
+        alert("로그아웃 중 오류가 발생했습니다.");
+      });
+    });
+
+    auth.onAuthStateChanged((user) => {
+      currentUser = user;
+      updateAuthUI();
+    });
+
+    function subscribeItems() {
+      if (unsubscribeItems) unsubscribeItems();
+      unsubscribeItems = db
+        .collection("lost_items")
+        .orderBy("createdAt", "desc")
+        .onSnapshot(
+          (snapshot) => {
+            items = snapshot.docs.map((doc) => {
+              const data = doc.data() || {};
+              return {
+                id: doc.id,
+                title: data.title || "",
+                category: data.category || "기타",
+                storageLocation: data.storageLocation || "",
+                foundPlace: data.foundPlace || "",
+                foundTime: data.foundTime || "",
+                finderName: data.finderName || "",
+                createdAt: data.createdAt || "",
+                imageUrl: data.imageUrl || "",
+                status: data.status || "stored",
+                ownerInfo: data.ownerInfo || ""
+              };
+            });
+            renderItems();
+          },
+          (error) => {
+            console.error("분실물 불러오기 오류:", error);
+            alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+          }
+        );
+    }
+
+    subscribeItems();
+
+    function renderItems() {
+      itemsContainer.innerHTML = "";
+      if (!items.length) {
+        emptyMessage.style.display = "block";
+        return;
+      }
+      emptyMessage.style.display = "none";
+
+      items.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "item-card";
+
+        const thumb = document.createElement("div");
+        thumb.className = "item-thumb";
+        const img = document.createElement("img");
+        img.alt = item.title || "분실물 이미지";
+        img.src = item.imageUrl || "";
+        thumb.appendChild(img);
+
+        const body = document.createElement("div");
+        body.className = "item-body";
+
+        const titleRow = document.createElement("div");
+        const titleEl = document.createElement("span");
+        titleEl.className = "item-title";
+        titleEl.textContent = item.title || "분실물";
+
+        const statusBadge = document.createElement("span");
+        statusBadge.className =
+          "badge-status " +
+          (item.status === "found" ? "status-found" : "status-stored");
+        statusBadge.textContent = statusLabel(item);
+
+        titleRow.appendChild(titleEl);
+        titleRow.appendChild(statusBadge);
+
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        meta.innerHTML = `
+          <div>카테고리: ${item.category || "-"}</div>
+          <div>보관 장소: ${item.storageLocation || "-"}</div>
+          <div>습득 장소: ${item.foundPlace || "-"}</div>
+          <div>습득 시간: ${formatDateTime(item.foundTime || item.createdAt)}</div>
+          <div>습득자: ${item.finderName || "-"}</div>
+          ${item.ownerInfo ? `<div>찾아간 학생: ${item.ownerInfo}</div>` : ""}
+        `;
+
+        const footer = document.createElement("div");
+        footer.className = "item-footer";
+        footer.textContent = "등록일: " + formatDateTime(item.createdAt);
+
+        body.appendChild(titleRow);
+        body.appendChild(meta);
+        body.appendChild(footer);
+
+        if (isTeacher) {
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+
+          const ownerBtn = document.createElement("button");
+          ownerBtn.className = "btn btn-primary";
+          ownerBtn.textContent =
+            item.status === "found" ? "주인 찾음 처리 완료" : "주인 찾음 처리";
+          ownerBtn.disabled = item.status === "found";
+          ownerBtn.addEventListener("click", async () => {
+            if (!isTeacher) {
+              alert("교사 계정으로 로그인해야 합니다.");
+              return;
+            }
+            if (item.status === "found") return;
+            const info = prompt("수령 학생 정보 입력\n예) 4학년 1반 10번 홍길동");
+            try {
+              await db.collection("lost_items").doc(item.id).update({
+                status: "found",
+                ownerInfo: info ? info.trim() : ""
+              });
+              alert("주인 찾기 완료로 처리되었습니다.");
+            } catch (err) {
+              console.error(err);
+              alert("상태 변경 중 오류가 발생했습니다.");
+            }
+          });
+          actions.appendChild(ownerBtn);
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn btn-danger";
+          deleteBtn.textContent = "완전 삭제";
+          deleteBtn.addEventListener("click", async () => {
+            if (!isTeacher) {
+              alert("교사 계정으로 로그인해야 합니다.");
+              return;
+            }
+            if (!confirm("해당 분실물 정보를 완전히 삭제하시겠습니까?")) return;
+            try {
+              await db.collection("lost_items").doc(item.id).delete();
+              alert("삭제되었습니다.");
+            } catch (err) {
+              console.error(err);
+              alert("삭제 중 오류가 발생했습니다.");
+            }
+          });
+          actions.appendChild(deleteBtn);
+
+          body.appendChild(actions);
+        }
+
+        card.appendChild(thumb);
+        card.appendChild(body);
+        itemsContainer.appendChild(card);
+      });
+    }
+
+    function resizeImage(file, maxSize = 800) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > h && w > maxSize) {
+              h = Math.round((h * maxSize) / w);
+              w = maxSize;
+            } else if (h >= w && h > maxSize) {
+              w = Math.round((w * maxSize) / h);
+              h = maxSize;
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error("이미지 변환 실패"));
+                  return;
+                }
+                resolve(blob);
+              },
+              "image/jpeg",
+              0.8
+            );
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadToImgbb(blob) {
+      const formData = new FormData();
+      formData.append("image", blob);
+
+      const url = "https://api.imgbb.com/1/upload?key=" + encodeURIComponent(IMGBB_API_KEY);
+      const res = await fetch(url, {
+        method: "POST",
+        body: formData
+      });
+      if (!res.ok) {
+        throw new Error("imgbb 업로드 실패 (status " + res.status + ")");
+      }
+      const data = await res.json();
+      if (!data || !data.data || !data.data.url) {
+        console.error("imgbb 응답:", data);
+        throw new Error("imgbb 응답에 URL이 없습니다.");
+      }
+      return data.data.url;
+    }
+
+    lostItemForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!isTeacher) {
+        alert("@nsworld.net 교사 계정으로 로그인한 경우에만 등록할 수 있습니다.");
+        return;
+      }
+
+      const file = itemImageInput.files[0];
+      if (!file) {
+        alert("분실물 사진을 업로드해 주세요.");
+        return;
+      }
+      if (!itemTitleInput.value.trim()) {
+        alert("분실물 이름 / 설명을 입력해 주세요.");
+        itemTitleInput.focus();
+        return;
+      }
+      if (!foundPlaceInput.value.trim()) {
+        alert("습득 장소를 입력해 주세요.");
+        foundPlaceInput.focus();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "업로드 중...";
+
+      try {
+        const resizedBlob = await resizeImage(file, 800);
+        const imageUrl = await uploadToImgbb(resizedBlob);
+
+        const nowIso = new Date().toISOString();
+        const foundTimeIso = foundTimeInput.value
+          ? new Date(foundTimeInput.value).toISOString()
+          : "";
+
+        await db.collection("lost_items").add({
+          title: itemTitleInput.value.trim(),
+          category: itemCategorySelect.value,
+          storageLocation: storageLocationSelect.value,
+          foundPlace: foundPlaceInput.value.trim(),
+          foundTime: foundTimeIso,
+          finderName: finderNameInput.value.trim(),
+          createdAt: nowIso,
+          imageUrl: imageUrl,
+          status: "stored",
+          ownerInfo: ""
+        });
+
+        lostItemForm.reset();
+        alert("분실물이 등록되었습니다.");
+      } catch (err) {
+        console.error(err);
+        alert("등록 중 오류가 발생했습니다. (이미지 서버 또는 Firestore)");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "등록";
+      }
+    });
+  </script>
+</body>
+</html>
