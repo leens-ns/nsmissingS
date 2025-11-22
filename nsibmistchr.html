@@ -164,10 +164,24 @@
       font-weight: 700;
       white-space: nowrap;
     }
+    
+    .btn-bulk-reregister {
+      background: #fef9c3; /* 연노랑 */
+      color: #92400e;     /* 눈에 잘 띄는 글씨 */
+      font-weight: 700;
+    }
+    
     .btn-bulk-found {
       background: #dcfce7;  /* 연한 초록색 계열 */
       color: #166534;       /* 진한 초록색 글씨 */
     }
+    
+    .btn-bulk-reregister {
+      background: #fef9c3; /* 연노랑 */
+      color: #92400e;     /* 눈에 잘 띄는 글씨 */
+      font-weight: 700;
+    }
+    
     .btn-bulk-found:disabled {
       opacity: 0.6;
     }
@@ -1018,8 +1032,12 @@ const firebaseConfig = {
         if (!bulkFoundBtn) return;
         if (currentCategory === "주인 찾음" || currentCategory === "폐기 완료") {
           bulkFoundBtn.textContent = "선택한 항목 일괄 재등록";
+        bulkFoundBtn.classList.add("btn-bulk-reregister");
+        bulkFoundBtn.classList.remove("btn-bulk-found");
         } else {
           bulkFoundBtn.textContent = "선택한 항목 일괄 주인 찾기";
+        bulkFoundBtn.classList.add("btn-bulk-found");
+        bulkFoundBtn.classList.remove("btn-bulk-reregister");
         }
       }
 
