@@ -1915,14 +1915,14 @@ const firebaseConfig = {
           // 기본 쿼리
           let query = db.collection("lost_items").orderBy("createdAt", "desc");
 
-          // 주인 찾음 / 폐기 완료 카테고리에서는 전체를 한 번에 가져오기 (페이징 X)
-          if (!(currentCategory === "주인 찾음" || currentCategory === "폐기 완료")) {
+          // 전체만 페이징, 나머지 카테고리는 한 번에 전체 로딩
+          if (currentCategory === "전체") {
             query = query.limit(limitSize);
             if (!isInitial && lastVisible) {
               query = query.startAfter(lastVisible);
             }
           } else {
-            // 특별 카테고리에서는 페이징 기준 초기화
+            // 전체가 아니면 페이징 기준 초기화(항상 처음부터 전체 로딩)
             lastVisible = null;
           }
 
@@ -1973,8 +1973,8 @@ const firebaseConfig = {
               });
             });
 
-            // 페이징 사용하는 일반 카테고리에서만 lastVisible 갱신
-            if (!(currentCategory === "주인 찾음" || currentCategory === "폐기 완료")) {
+            // 페이징은 전체 카테고리에서만 사용
+            if (currentCategory === "전체" && !snapshot.empty) {
               lastVisible = snapshot.docs[snapshot.docs.length - 1];
             }
           }
@@ -1990,8 +1990,8 @@ const firebaseConfig = {
             }
           }
 
-          // '주인 찾음' / '폐기 완료' 카테고리에서는 더보기 버튼 숨기고, 나머지에만 페이징 버튼 적용
-          if (currentCategory === "주인 찾음" || currentCategory === "폐기 완료") {
+          // 전체가 아닌 카테고리(의류/가방, 학용품, 전자기기 등)에서는 더보기 버튼 숨김
+          if (currentCategory !== "전체") {
             if (loadMoreBtn) loadMoreBtn.style.display = "none";
           } else {
             if (snapshot.empty || snapshot.docs.length < limitSize) {
