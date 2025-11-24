@@ -409,6 +409,8 @@ const firebaseConfig = {
     let lastVisible = null;
     let isLoading = false;
     const PAGE_SIZE = 5;
+    let displayCount = PAGE_SIZE;
+
 
     const itemsContainer = document.getElementById("itemsContainer");
     const emptyMessage = document.getElementById("emptyMessage");
@@ -435,8 +437,9 @@ const firebaseConfig = {
       let list = items.slice();
       list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
-      if (filterText.trim()) {
-        const q = filterText.trim().toLowerCase();
+      const trimmed = filterText.trim();
+      if (trimmed) {
+        const q = trimmed.toLowerCase();
         list = list.filter((item) => {
           const fields = [
             item.title,
@@ -449,18 +452,28 @@ const firebaseConfig = {
         });
       }
 
+      // 카테고리가 '전체'가 아닐 때는 해당 카테고리만 필터링
       if (currentCategory !== "전체") {
         list = list.filter((item) => item.category === currentCategory);
       }
 
-      if (!list.length) {
+      const totalCount = list.length;
+
+      // 전체 + 검색어 없음인 경우에만 화면상 페이징 적용
+      let visibleList = list;
+      if (currentCategory === "전체" && !trimmed) {
+        visibleList = list.slice(0, displayCount);
+      }
+
+      if (!visibleList.length) {
         emptyMessage.style.display = "block";
+        if (loadMoreBtn) loadMoreBtn.style.display = "none";
         return;
       } else {
         emptyMessage.style.display = "none";
       }
 
-      list.forEach((item) => {
+      visibleList.forEach((item) => {
         const card = document.createElement("div");
         card.className = "item-card";
         card.dataset.itemId = item.id;
@@ -499,8 +512,8 @@ const firebaseConfig = {
         const placeSpan = document.createElement("span");
         placeSpan.textContent = "습득 장소: " + (item.foundPlace || "-");
         const timeSpan = document.createElement("span");
-        timeSpan.textContent = "습득 시간: " +
-          formatDateTime(item.foundTime || item.createdAt);
+        timeSpan.textContent =
+          "습득 시간: " + formatDateTime(item.foundTime || item.createdAt);
         const finderSpan = document.createElement("span");
         finderSpan.textContent = "습득자: " + (item.finderName || "-");
         meta.appendChild(placeSpan);
@@ -522,6 +535,17 @@ const firebaseConfig = {
 
         card.addEventListener("click", () => openModal(item));
       });
+
+      // 더 보기 버튼 표시 여부 결정
+      if (
+        currentCategory === "전체" &&
+        !trimmed &&
+        totalCount > displayCount
+      ) {
+        if (loadMoreBtn) loadMoreBtn.style.display = "block";
+      } else {
+        if (loadMoreBtn) loadMoreBtn.style.display = "none";
+      }
     }
 
     function openModal(item) {
@@ -568,17 +592,15 @@ const firebaseConfig = {
       if (isLoading) return;
       isLoading = true;
       try {
-        let query = db.collection("lost_items")
+        // 학생용 페이지에서는 Firestore에서 한 번에 전체 분실물을 불러오고,
+        // 화면에서는 '전체' 카테고리에만 페이징을 적용합니다.
+        const snapshot = await db.collection("lost_items")
           .orderBy("createdAt", "desc")
-          .limit(PAGE_SIZE);
-        if (!isInitial && lastVisible) {
-          query = query.startAfter(lastVisible);
-        }
-        const snapshot = await query.get();
+          .get();
 
-        if (isInitial) {
-          items = [];
-        }
+        // 매번 전체 목록을 다시 구성
+        items = [];
+
         if (!snapshot.empty) {
           snapshot.docs.forEach((doc) => {
             const data = doc.data() || {};
@@ -594,18 +616,16 @@ const firebaseConfig = {
               imageUrl: data.imageUrl || "",
               status: data.status || "stored"
             };
+            // 학생용에서는 보관 중인 물건(status === "stored")만 표시
             if (item.status === "stored") {
               items.push(item);
             }
           });
-          lastVisible = snapshot.docs[snapshot.docs.length - 1];
         }
 
-        if (snapshot.empty || snapshot.docs.length < PAGE_SIZE) {
-          if (loadMoreBtn) loadMoreBtn.style.display = "none";
-        } else {
-          if (loadMoreBtn) loadMoreBtn.style.display = "block";
-        }
+        // 전체 데이터를 다시 불러왔으므로 페이징 카운터를 초기화
+        displayCount = PAGE_SIZE;
+        lastVisible = null;
 
         renderItems(searchInput.value);
       } catch (err) {
@@ -616,9 +636,12 @@ const firebaseConfig = {
       }
     }
 
+
+
     if (loadMoreBtn) {
       loadMoreBtn.addEventListener("click", () => {
-        loadItems(false);
+        displayCount += PAGE_SIZE;
+        renderItems(searchInput.value);
       });
     }
 
