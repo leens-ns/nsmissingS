@@ -1032,7 +1032,8 @@ const firebaseConfig = {
       let isTeacher = false;
       let lastVisible = null;
       let isLoading = false;
-      const PAGE_SIZE = 5;
+      const FIRST_PAGE_SIZE = 4;
+      const PAGE_SIZE = 3;
 
       function updateBulkButtonsState() {
         const hasSelection = selectedIds && selectedIds.size > 0;
@@ -1222,7 +1223,12 @@ const firebaseConfig = {
         itemsContainer.innerHTML = "";
 
         let list = items.slice();
-        list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+        // 정렬 기준: '습득 시간'이 있으면 우선, 없으면 등록일 기준
+        list.sort((a, b) => {
+          const aKey = (a.foundTime || a.createdAt || "");
+          const bKey = (b.foundTime || b.createdAt || "");
+          return (bKey).localeCompare(aKey);
+        });
 
         if (filterText.trim()) {
           const q = filterText.trim().toLowerCase();
@@ -1506,7 +1512,24 @@ const firebaseConfig = {
               b.classList.toggle("btn-chip-active", b === btn)
             );
             updateBulkButtonLabel();
-            renderItems(searchInput.value);
+
+            // 주인 찾음 / 폐기 완료 카테고리에서는 전체 재조회 (페이징 없이 전부 표시)
+            if (currentCategory === "주인 찾음" || currentCategory === "폐기 완료") {
+              if (loadMoreBtn) loadMoreBtn.style.display = "none";
+              lastVisible = null;
+              items = [];
+              selectedIds.clear();
+              updateBulkButtonsState();
+              loadItems(true);
+              return;
+            }
+
+            // 그 외 카테고리에서는 페이징을 처음부터 다시 시작 (중복 로딩 방지)
+            lastVisible = null;
+            items = [];
+            selectedIds.clear();
+            updateBulkButtonsState();
+            loadItems(true);
           });
         });
       }
@@ -1614,6 +1637,8 @@ const firebaseConfig = {
             });
             alert("주인 찾기 완료로 처리되었습니다.");
             closeModal();
+            lastVisible = null;
+            await loadItems(true);
           } catch (err) {
             console.error("주인 찾기 변경 오류:", err);
             alert("상태 변경 중 오류가 발생했습니다.");
@@ -1644,6 +1669,8 @@ const firebaseConfig = {
             });
             alert("해당 물품이 폐기 완료 상태로 변경되었습니다.");
             closeModal();
+            lastVisible = null;
+            await loadItems(true);
           } catch (err) {
             console.error("폐기 처리 오류:", err);
             alert("폐기 처리 중 오류가 발생했습니다.");
@@ -1731,10 +1758,14 @@ const firebaseConfig = {
 
           try {
             await db.collection("lost_items").doc(item.id).update({
-              status: "stored"
+              status: "stored",
+              ownerInfo: "",
+              foundTime: firebase.firestore.FieldValue.serverTimestamp()
             });
             alert("물품이 다시 '보관 중' 상태로 변경되었습니다.");
             closeModal();
+            lastVisible = null;
+            await loadItems(true);
           } catch (err) {
             console.error("재등록 오류:", err);
             alert("재등록 중 오류가 발생했습니다.");
@@ -1797,7 +1828,9 @@ const firebaseConfig = {
             try {
               for (const id of targetIds) {
                 await db.collection("lost_items").doc(id).update({
-                  status: "stored"
+                  status: "stored",
+                  ownerInfo: "",
+                  foundTime: firebase.firestore.FieldValue.serverTimestamp()
                 });
               }
               alert(`선택한 ${targetIds.length}개의 분실물이 다시 '보관 중' 상태로 재등록되었습니다.`);
@@ -1877,21 +1910,54 @@ const firebaseConfig = {
         if (isLoading) return;
         isLoading = true;
         try {
-          let query = db.collection("lost_items")
-            .orderBy("createdAt", "desc")
-            .limit(PAGE_SIZE);
-          if (!isInitial && lastVisible) {
-            query = query.startAfter(lastVisible);
+          const limitSize = isInitial ? FIRST_PAGE_SIZE : PAGE_SIZE;
+
+          // 기본 쿼리
+          let query = db.collection("lost_items").orderBy("createdAt", "desc");
+
+          // 주인 찾음 / 폐기 완료 카테고리에서는 전체를 한 번에 가져오기 (페이징 X)
+          if (!(currentCategory === "주인 찾음" || currentCategory === "폐기 완료")) {
+            query = query.limit(limitSize);
+            if (!isInitial && lastVisible) {
+              query = query.startAfter(lastVisible);
+            }
+          } else {
+            // 특별 카테고리에서는 페이징 기준 초기화
+            lastVisible = null;
           }
+
           const snapshot = await query.get();
 
           if (isInitial) {
             items = [];
             selectedIds.clear();
           }
+
+          const toDelete = [];
+          const now = new Date();
+
           if (!snapshot.empty) {
             snapshot.docs.forEach((doc) => {
               const data = doc.data() || {};
+              const status = data.status || "stored";
+
+              // 주인 찾음/폐기 완료 상태에서 1주일 이상 지난 항목 자동 삭제
+              if (status === "found" || status === "discarded") {
+                let baseDate = null;
+                if (data.foundTime && data.foundTime.toDate) {
+                  baseDate = data.foundTime.toDate();
+                } else if (data.createdAt && data.createdAt.toDate) {
+                  baseDate = data.createdAt.toDate();
+                }
+                if (baseDate) {
+                  const diffDays = (now - baseDate) / (1000 * 60 * 60 * 24);
+                  if (diffDays >= 7) {
+                    toDelete.push(doc.id);
+                    return; // 이 항목은 목록에 넣지 않음
+                  }
+                }
+              }
+
               items.push({
                 id: doc.id,
                 title: data.title || "",
@@ -1902,17 +1968,37 @@ const firebaseConfig = {
                 finderName: data.finderName || "",
                 createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
                 imageUrl: data.imageUrl || "",
-                status: data.status || "stored",
+                status: status,
                 ownerInfo: data.ownerInfo || ""
               });
             });
-            lastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+            // 페이징 사용하는 일반 카테고리에서만 lastVisible 갱신
+            if (!(currentCategory === "주인 찾음" || currentCategory === "폐기 완료")) {
+              lastVisible = snapshot.docs[snapshot.docs.length - 1];
+            }
           }
 
-          if (snapshot.empty || snapshot.docs.length < PAGE_SIZE) {
+          // 오래된 항목 실제 Firestore에서 삭제
+          if (toDelete.length) {
+            try {
+              await Promise.all(
+                toDelete.map((id) => db.collection("lost_items").doc(id).delete())
+              );
+            } catch (delErr) {
+              console.error("자동 삭제 처리 중 오류:", delErr);
+            }
+          }
+
+          // '주인 찾음' / '폐기 완료' 카테고리에서는 더보기 버튼 숨기고, 나머지에만 페이징 버튼 적용
+          if (currentCategory === "주인 찾음" || currentCategory === "폐기 완료") {
             if (loadMoreBtn) loadMoreBtn.style.display = "none";
           } else {
-            if (loadMoreBtn) loadMoreBtn.style.display = "block";
+            if (snapshot.empty || snapshot.docs.length < limitSize) {
+              if (loadMoreBtn) loadMoreBtn.style.display = "none";
+            } else {
+              if (loadMoreBtn) loadMoreBtn.style.display = "block";
+            }
           }
 
           renderItems(searchInput ? searchInput.value : "");
