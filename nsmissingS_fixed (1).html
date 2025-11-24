@@ -1,0 +1,656 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>남성초등학교 분실물 센터 - 학생용</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #f3f5fb;
+      color: #333;
+    }
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      padding: 16px 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .header-logo {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 8px;
+    }
+    header h1 {
+      margin: 8px 0 4px;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #2563eb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
+    .notice-box {
+      background: #fff7c2;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border: 1px solid #fde68a;
+    }
+    .notice-box p.notice { font-size: 1rem; font-weight: 700; }
+
+
+    .notice {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    /* 검색 영역 */
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .search-row input[type="text"] {
+      flex: 1 1 200px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid #cbd5f5;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .search-row input[type="text"]:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+
+    .cat-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .btn-chip {
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #4b5563;
+      cursor: pointer;
+    }
+    .btn-chip-active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #e0f2fe;
+      color: #0369a1;
+      margin-right: 4px;
+    }
+    .storage-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #e0edff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-left: 4px;
+      cursor: default;
+    }
+
+
+    /* 분실물 목록 */
+    #itemsContainer {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .item-card {
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+    .item-card:hover {
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
+      transform: translateY(-1px);
+    }
+    .item-image-wrapper {
+      width: 100%;
+      padding-top: 60%;
+      position: relative;
+      overflow: hidden;
+      background: #e5e7eb;
+    }
+    .item-image-wrapper img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .item-body {
+      padding: 10px 12px 12px;
+      font-size: 0.85rem;
+    }
+    .item-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .item-meta {
+      margin-top: 4px;
+      line-height: 1.4;
+      color: #4b5563;
+    }
+    .item-meta span { display: block; }
+    .item-footer {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .empty-message {
+      text-align: center;
+      padding: 16px;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+
+    /* 모달 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 840px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .modal-close {
+      border: none;
+      background: transparent;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    .modal-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .modal-image {
+      flex: 1;
+      max-height: 380px;
+      overflow: hidden;
+      background: #e5e7eb;
+      cursor: pointer;
+    }
+    .modal-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+    .modal-body {
+      padding: 12px 16px 16px;
+      font-size: 0.9rem;
+    }
+    .modal-body p {
+      margin: 4px 0;
+    }
+    .modal-meta {
+      margin-top: 4px;
+      line-height: 1.5;
+      color: #4b5563;
+    }
+
+    @media (min-width: 768px) {
+      header h1 { font-size: 2.4rem; }
+      #itemsContainer {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .modal-content {
+        flex-direction: row;
+      }
+      .modal-image {
+        width: 45%;
+        max-height: none;
+      }
+      .modal-body {
+        width: 55%;
+      }
+    }
+    @media (min-width: 1024px) {
+      #itemsContainer {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <img src="https://nisb.kr/plugins/custom_plugin/simple_page/assets/img/branding/logo4.png?date_ver=2025-11" alt="남성초등학교 로고" class="header-logo" />
+      <h1>남성초등학교 분실물 센터</h1>
+      <p>분실물을 한 눈에 확인하고, 잃어버린 물건을 찾아가세요!</p>
+    </header>
+
+    <div class="card">
+      <div class="notice-box">
+        <p class="notice">※ 이 페이지에서는 분실물 조회만 가능합니다.</p>
+        <p class="notice">※ 물건 보관 후 한 달이 지나면 물품을 폐기처리합니다.</p>
+              <p class="notice">※ 자신의 물건이 보일 경우 보관 장소에 방문하여 물건을 찾아가 주세요.</p>
+      </div>
+
+      <div class="search-row">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="분실물 검색 (종류, 장소, 설명 등)"
+        />
+        <button class="btn btn-primary" id="searchBtn">검색</button>
+      </div>
+
+      <!-- 카테고리별 필터 버튼 (주인 찾음 / 폐기 완료는 학생용에서 숨김) -->
+      <div class="cat-row" id="categoryButtons">
+        <button class="btn-chip btn-chip-active" data-category="전체">전체</button>
+        <button class="btn-chip" data-category="의류/가방">의류/가방</button>
+        <button class="btn-chip" data-category="학용품">학용품</button>
+        <button class="btn-chip" data-category="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</button>
+        <button class="btn-chip" data-category="물병/텀블러">물병/텀블러</button>
+        <button class="btn-chip" data-category="열쇠/악세사리">열쇠/악세사리</button>
+        <button class="btn-chip" data-category="기타">기타</button>
+      </div>
+
+      <div id="itemsContainer"></div>
+      <div id="emptyMessage" class="empty-message" style="display:none;">
+        현재 보관 중인 분실물이 없습니다.
+      </div>
+      <button id="loadMoreBtn" class="btn btn-primary" style="margin:12px auto 0; display:none; width:100%;">
+        더 보기
+      </button>
+    </div>
+  </div>
+
+  <!-- 상세 모달 (조회 전용) -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle"></div>
+        <button class="modal-close" id="modalCloseBtn" aria-label="닫기">×</button>
+      </div>
+      <div class="modal-content">
+        <div class="modal-image" id="modalImageWrapper">
+          <img id="modalImage" alt="분실물 이미지" />
+        </div>
+        <div class="modal-body">
+          <div class="modal-meta">
+            <p><strong>카테고리:</strong> <span id="modalCategory"></span></p>
+            <p><strong>보관 장소:</strong> <span id="modalStorage" class="storage-badge"></span></p>
+            <p><strong>습득 장소:</strong> <span id="modalFoundPlace"></span></p>
+            <p><strong>습득 시간:</strong> <span id="modalFoundTime"></span></p>
+            <p><strong>습득자:</strong> <span id="modalFinder"></span></p>
+            <p><strong>등록일:</strong> <span id="modalCreatedAt"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+
+  <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDyp8MRjZUwZZxBMUZBDpCqYac2TaMIO5M",
+  authDomain: "nsmissingt-e9fbf.firebaseapp.com",
+  projectId: "nsmissingt-e9fbf",
+  storageBucket: "nsmissingt-e9fbf.firebasestorage.app",
+  messagingSenderId: "163980342864",
+  appId: "1:163980342864:web:e699b4d11af04752cd0355"
+};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function normalizeTs(value) {
+      if (!value) return "";
+      if (typeof value === "string") return value;
+      if (value.toDate) return value.toDate().toISOString();
+      return "";
+    }
+
+    function formatDateTime(isoString) {
+      if (!isoString) return "-";
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) return "-";
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      return y + ". " + m + ". " + day + ". " + hh + ":" + mm;
+    }
+
+    let items = [];
+    let currentCategory = "전체";
+    let lastVisible = null;
+    let isLoading = false;
+    const PAGE_SIZE = 5;
+
+    const itemsContainer = document.getElementById("itemsContainer");
+    const emptyMessage = document.getElementById("emptyMessage");
+    const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const categoryButtons = document.querySelectorAll("#categoryButtons .btn-chip");
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+    const detailModal = document.getElementById("detailModal");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalImage = document.getElementById("modalImage");
+    const modalImageWrapper = document.getElementById("modalImageWrapper");
+    const modalCategory = document.getElementById("modalCategory");
+    const modalStorage = document.getElementById("modalStorage");
+    const modalFoundPlace = document.getElementById("modalFoundPlace");
+    const modalFoundTime = document.getElementById("modalFoundTime");
+    const modalFinder = document.getElementById("modalFinder");
+    const modalCreatedAt = document.getElementById("modalCreatedAt");
+
+    function renderItems(filterText = "") {
+      itemsContainer.innerHTML = "";
+
+      let list = items.slice();
+      list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+      if (filterText.trim()) {
+        const q = filterText.trim().toLowerCase();
+        list = list.filter((item) => {
+          const fields = [
+            item.title,
+            item.category,
+            item.storageLocation,
+            item.foundPlace,
+            item.finderName
+          ];
+          return fields.some((f) => (f || "").toLowerCase().includes(q));
+        });
+      }
+
+      if (currentCategory !== "전체") {
+        list = list.filter((item) => item.category === currentCategory);
+      }
+
+      if (!list.length) {
+        emptyMessage.style.display = "block";
+        return;
+      } else {
+        emptyMessage.style.display = "none";
+      }
+
+      list.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "item-card";
+        card.dataset.itemId = item.id;
+
+        const imgWrap = document.createElement("div");
+        imgWrap.className = "item-image-wrapper";
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.src = item.imageUrl || "";
+        img.alt = item.title || "분실물 이미지";
+        imgWrap.appendChild(img);
+
+        const body = document.createElement("div");
+        body.className = "item-body";
+
+        const title = document.createElement("div");
+        title.className = "item-title";
+        title.textContent = item.title || "분실물";
+
+        const badgesRow = document.createElement("div");
+        if (item.category) {
+          const cat = document.createElement("span");
+          cat.className = "badge";
+          cat.textContent = item.category;
+          badgesRow.appendChild(cat);
+        }
+        if (item.storageLocation) {
+          const loc = document.createElement("span");
+          loc.className = "badge";
+          loc.textContent = "보관: " + item.storageLocation;
+          badgesRow.appendChild(loc);
+        }
+
+        const meta = document.createElement("div");
+        meta.className = "item-meta";
+        const placeSpan = document.createElement("span");
+        placeSpan.textContent = "습득 장소: " + (item.foundPlace || "-");
+        const timeSpan = document.createElement("span");
+        timeSpan.textContent = "습득 시간: " +
+          formatDateTime(item.foundTime || item.createdAt);
+        const finderSpan = document.createElement("span");
+        finderSpan.textContent = "습득자: " + (item.finderName || "-");
+        meta.appendChild(placeSpan);
+        meta.appendChild(timeSpan);
+        meta.appendChild(finderSpan);
+
+        const footer = document.createElement("div");
+        footer.className = "item-footer";
+        footer.textContent = "등록일: " + formatDateTime(item.createdAt);
+
+        body.appendChild(title);
+        body.appendChild(badgesRow);
+        body.appendChild(meta);
+        body.appendChild(footer);
+
+        card.appendChild(imgWrap);
+        card.appendChild(body);
+        itemsContainer.appendChild(card);
+
+        card.addEventListener("click", () => openModal(item));
+      });
+    }
+
+    function openModal(item) {
+      if (!item) return;
+      modalTitle.textContent = item.title || "분실물";
+      modalImage.src = item.imageUrl || "";
+      modalCategory.textContent = item.category || "-";
+      modalStorage.textContent = item.storageLocation || "-";
+      modalFoundPlace.textContent = item.foundPlace || "-";
+      modalFoundTime.textContent = formatDateTime(item.foundTime || item.createdAt);
+      modalFinder.textContent = item.finderName || "-";
+      modalCreatedAt.textContent = formatDateTime(item.createdAt);
+      detailModal.style.display = "flex";
+    }
+
+    function closeModal() {
+      detailModal.style.display = "none";
+    }
+
+    searchBtn.addEventListener("click", () => {
+      renderItems(searchInput.value);
+    });
+    searchInput.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") renderItems(searchInput.value);
+    });
+
+    categoryButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentCategory = btn.dataset.category;
+        categoryButtons.forEach((b) =>
+          b.classList.toggle("btn-chip-active", b === btn)
+        );
+        renderItems(searchInput.value);
+      });
+    });
+
+    modalCloseBtn.addEventListener("click", closeModal);
+    detailModal.addEventListener("click", (e) => {
+      if (e.target === detailModal) closeModal();
+    });
+    modalImageWrapper.addEventListener("click", closeModal);
+
+    async function loadItems(isInitial = false) {
+      if (isLoading) return;
+      isLoading = true;
+      try {
+        let query = db.collection("lost_items").orderBy("createdAt", "desc");
+
+        // 전체만 페이징, 나머지는 전체 로딩
+        if (currentCategory === "전체") {
+          query = query.limit(PAGE_SIZE);
+          if (!isInitial && lastVisible) {
+            query = query.startAfter(lastVisible);
+          }
+        } else {
+          lastVisible = null;
+        }
+
+        const snapshot = await query.get();
+
+        if (isInitial) {
+          items = [];
+        }
+        if (!snapshot.empty) {
+          snapshot.docs.forEach((doc) => {
+            const data = doc.data() || {};
+            const item = {
+              id: doc.id,
+              title: data.title || "",
+              category: data.category || "기타",
+              storageLocation: data.storageLocation || "",
+              foundPlace: data.foundPlace || "",
+              foundTime: normalizeTs(data.foundTime),
+              finderName: data.finderName || "",
+              createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
+              imageUrl: data.imageUrl || "",
+              status: data.status || "stored"
+            };
+            if (item.status === "stored") {
+              items.push(item);
+            }
+          });
+
+          if (currentCategory === "전체") {
+            lastVisible = snapshot.docs[snapshot.docs.length - 1];
+          }
+        }
+
+        // 버튼 표시
+        if (currentCategory !== "전체") {
+          loadMoreBtn.style.display = "none";
+        } else {
+          if (snapshot.empty || snapshot.docs.length < PAGE_SIZE) {
+            loadMoreBtn.style.display = "none";
+          } else {
+            loadMoreBtn.style.display = "block";
+          }
+        }
+
+        renderItems(searchInput.value);
+      } catch (err) {
+        console.error("분실물 불러오기 오류:", err);
+        alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        isLoading = false;
+      }
+    }
+if (loadMoreBtn) loadMoreBtn.style.display = "none";
+        } else {
+          if (loadMoreBtn) loadMoreBtn.style.display = "block";
+        }
+
+        renderItems(searchInput.value);
+      } catch (err) {
+        console.error("분실물 불러오기 오류:", err);
+        alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener("click", () => {
+        loadItems(false);
+      });
+    }
+
+    // 초기 1페이지 로드
+    loadItems(true);
+  </script>
+</body>
+</html>
