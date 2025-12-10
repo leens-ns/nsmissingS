@@ -1635,7 +1635,8 @@ const firebaseConfig = {
           try {
             await db.collection("lost_items").doc(item.id).update({
               status: "found",
-              ownerInfo: info.trim()
+              ownerInfo: info.trim(),
+              statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             alert("주인 찾기 완료로 처리되었습니다.");
             closeModal();
@@ -1667,7 +1668,8 @@ const firebaseConfig = {
 
           try {
             await db.collection("lost_items").doc(item.id).update({
-              status: "discarded"
+              status: "discarded",
+              statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             alert("해당 물품이 폐기 완료 상태로 변경되었습니다.");
             closeModal();
@@ -1866,7 +1868,8 @@ const firebaseConfig = {
               for (const id of targetIds) {
                 await db.collection("lost_items").doc(id).update({
                   status: "found",
-                  ownerInfo: trimmedInfo
+                  ownerInfo: trimmedInfo,
+                  statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
               }
               alert(`선택한 ${targetIds.length}개의 분실물이 '주인 찾음'으로 처리되었습니다.`);
@@ -1941,12 +1944,22 @@ const firebaseConfig = {
           if (!snapshot.empty) {
             snapshot.docs.forEach((doc) => {
               const data = doc.data() || {};
-              const status = data.status || "stored";
+              let rawStatus = data.status || "stored";
+              let status = rawStatus;
+              // 과거 버전에서 한글 상태값("주인 찾음", "폐기 완료")으로 저장된 경우를 위해 정규화
+              if (rawStatus === "주인 찾음") {
+                status = "found";
+              } else if (rawStatus === "폐기 완료") {
+                status = "discarded";
+              }
 
               // 주인 찾음/폐기 완료 상태에서 1주일 이상 지난 항목 자동 삭제
               if (status === "found" || status === "discarded") {
                 let baseDate = null;
-                if (data.foundTime && data.foundTime.toDate) {
+                // 상태 변경 시점을 우선 기준으로 삼고, 없으면 기존 필드를 사용
+                if (data.statusUpdatedAt && data.statusUpdatedAt.toDate) {
+                  baseDate = data.statusUpdatedAt.toDate();
+                } else if (data.foundTime && data.foundTime.toDate) {
                   baseDate = data.foundTime.toDate();
                 } else if (data.createdAt && data.createdAt.toDate) {
                   baseDate = data.createdAt.toDate();
