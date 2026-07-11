@@ -6,77 +6,112 @@
   <title>남성초등학교 분실물 센터 - 학생용</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    :root {
+      --page-title-size: 1.55rem;
+      --page-title-size-wide: 1.85rem;
+      --page-title-size-mobile: 1.28rem;
+    }
+    @font-face {
+      font-family: "Paperlogy";
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+      src: local("Paperlogy-4Regular"), local("Paperlogy 4 Regular"),
+        url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-4Regular.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Paperlogy";
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+      src: local("Paperlogy-6SemiBold"), local("Paperlogy 6 SemiBold"),
+        url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-6SemiBold.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Paperlogy";
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+      src: local("Paperlogy-7Bold"), local("Paperlogy 7 Bold"),
+        url("https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy-7Bold.woff2") format("woff2");
+    }
     * { box-sizing: border-box; }
+    button, input, select, textarea {
+      font: inherit;
+    }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-family: "Paperlogy", "페이퍼로지", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       background: #f3f5fb;
       color: #333;
+      font-size: 14px;
     }
     .page {
-      max-width: 1200px;
+      max-width: 1080px;
       margin: 0 auto;
-      padding: 16px;
+      padding: 14px;
     }
     .card {
       background: #ffffff;
-      border-radius: 12px;
+      border-radius: 8px;
       box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-      padding: 16px 20px;
+      padding: 14px;
     }
     header {
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .header-logo {
-      max-width: 100%;
+      max-width: min(100%, 420px);
+      max-height: 56px;
       height: auto;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      object-fit: contain;
     }
-    header h1 {
-      margin: 8px 0 4px;
-      font-size: 2rem;
-      font-weight: 700;
+    .page-title {
+      margin: 6px 0 5px;
+      font-size: var(--page-title-size);
+      font-weight: 600;
       color: #2563eb;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.18;
     }
     header p {
       margin: 0;
-      font-size: 0.9rem;
+      font-size: 0.86rem;
       color: #64748b;
     }
 
     .notice-box {
-      background: #fff7c2;
+      background: #fffbea;
       border-radius: 8px;
       padding: 10px 12px;
       margin-bottom: 12px;
       border: 1px solid #fde68a;
     }
-    .notice-box p.notice { font-size: 1rem; font-weight: 700; }
+    .notice-box p.notice { font-size: 0.86rem; font-weight: 400; line-height: 1.55; }
 
 
     .notice {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #6b7280;
-      margin-bottom: 8px;
+      margin: 4px 0;
     }
 
     /* 검색 영역 */
     .search-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
+      margin-bottom: 12px;
+      align-items: stretch;
     }
     .search-row input[type="text"] {
-      flex: 1 1 200px;
-      padding: 10px 12px;
-      border-radius: 999px;
+      width: 100%;
+      min-height: 36px;
+      padding: 8px 10px;
+      border-radius: 8px;
       border: 1px solid #cbd5f5;
-      font-size: 0.95rem;
+      font-size: 0.86rem;
       outline: none;
     }
     .search-row input[type="text"]:focus {
@@ -85,9 +120,11 @@
     }
     .btn {
       border: none;
-      border-radius: 999px;
-      padding: 8px 16px;
-      font-size: 0.9rem;
+      border-radius: 8px;
+      min-height: 36px;
+      padding: 7px 12px;
+      font-size: 0.86rem;
+      font-weight: 400;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -96,6 +133,45 @@
       white-space: nowrap;
     }
     .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary {
+      background: #eef2ff;
+      color: #1e40af;
+      border: 1px solid #c7d2fe;
+    }
+    .btn-link {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #dbe3ef;
+      text-decoration: none;
+    }
+
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .summary-box {
+      border: 1px solid #dbeafe;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #f8fbff;
+    }
+    .summary-label {
+      display: block;
+      color: #64748b;
+      font-size: 0.72rem;
+    }
+    .summary-value {
+      display: block;
+      color: #0f172a;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    strong {
+      font-weight: 500;
+    }
 
     .cat-row {
       display: flex;
@@ -105,13 +181,15 @@
     }
 
     .btn-chip {
-      border-radius: 999px;
+      border-radius: 8px;
+      min-height: 32px;
       padding: 4px 10px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       border: 1px solid #d1d5db;
       background: #ffffff;
       color: #4b5563;
       cursor: pointer;
+      text-align: center;
     }
     .btn-chip-active {
       background: #2563eb;
@@ -122,7 +200,7 @@
     .badge {
       display: inline-block;
       padding: 2px 8px;
-      border-radius: 999px;
+      border-radius: 8px;
       font-size: 0.75rem;
       background: #e0f2fe;
       color: #0369a1;
@@ -134,9 +212,9 @@
       background: #e0edff;
       color: #1d4ed8;
       border: 1px solid #bfdbfe;
-      border-radius: 999px;
-      font-weight: 600;
-      font-size: 0.85rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.78rem;
       margin-left: 4px;
       cursor: default;
     }
@@ -144,16 +222,16 @@
 
     /* 분실물 목록 */
     #itemsContainer {
-      margin-top: 12px;
+      margin-top: 14px;
       display: grid;
       grid-template-columns: 1fr;
       gap: 12px;
     }
     .item-card {
       background: #ffffff;
-      border-radius: 12px;
+      border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 1px 8px rgba(15, 23, 42, 0.07);
       display: flex;
       flex-direction: column;
       cursor: pointer;
@@ -164,10 +242,11 @@
     }
     .item-image-wrapper {
       width: 100%;
-      padding-top: 60%;
+      aspect-ratio: 4 / 3;
       position: relative;
       overflow: hidden;
       background: #e5e7eb;
+      padding-top: 0;
     }
     .item-image-wrapper img {
       position: absolute;
@@ -177,18 +256,18 @@
       object-fit: cover;
     }
     .item-body {
-      padding: 10px 12px 12px;
-      font-size: 0.85rem;
+      padding: 10px 11px 12px;
+      font-size: 0.82rem;
     }
     .item-title {
-      font-weight: 600;
-      font-size: 0.95rem;
+      font-weight: 500;
+      font-size: 0.9rem;
       color: #0f172a;
       margin-bottom: 4px;
     }
     .item-meta {
       margin-top: 4px;
-      line-height: 1.4;
+      line-height: 1.5;
       color: #4b5563;
     }
     .item-meta span { display: block; }
@@ -202,7 +281,13 @@
       text-align: center;
       padding: 16px;
       color: #9ca3af;
-      font-size: 0.9rem;
+      font-size: 0.84rem;
+    }
+    .loading-message {
+      text-align: center;
+      padding: 14px;
+      color: #64748b;
+      font-size: 0.84rem;
     }
 
     /* 모달 */
@@ -218,7 +303,7 @@
     }
     .modal {
       background: #ffffff;
-      border-radius: 16px;
+      border-radius: 8px;
       max-width: 840px;
       width: 100%;
       max-height: 90vh;
@@ -234,14 +319,14 @@
       border-bottom: 1px solid #e5e7eb;
     }
     .modal-title {
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 0.92rem;
+      font-weight: 500;
       color: #0f172a;
     }
     .modal-close {
       border: none;
       background: transparent;
-      font-size: 1.2rem;
+      font-size: 1rem;
       cursor: pointer;
       color: #6b7280;
     }
@@ -265,7 +350,7 @@
     }
     .modal-body {
       padding: 12px 16px 16px;
-      font-size: 0.9rem;
+      font-size: 0.84rem;
     }
     .modal-body p {
       margin: 4px 0;
@@ -275,9 +360,29 @@
       line-height: 1.5;
       color: #4b5563;
     }
+    .quick-links {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .quick-links .btn {
+      min-width: 128px;
+      border-color: #99f6e4;
+      color: #0f766e;
+      background: #ccfbf1;
+      box-shadow: 0 1px 3px rgba(15, 118, 110, 0.12);
+    }
+    .manual-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #475569;
+      line-height: 1.7;
+    }
 
     @media (min-width: 768px) {
-      header h1 { font-size: 2.4rem; }
+      .page-title { font-size: var(--page-title-size-wide); }
       #itemsContainer {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -294,7 +399,43 @@
     }
     @media (min-width: 1024px) {
       #itemsContainer {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(240px, 1fr));
+      }
+    }
+    @media (max-width: 640px) {
+      .page {
+        padding: 10px;
+      }
+      .card {
+        padding: 12px;
+      }
+      .page-title {
+        font-size: var(--page-title-size-mobile, 1.28rem);
+      }
+      .search-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 72px;
+      }
+      #resetBtn {
+        grid-column: 1 / -1;
+      }
+      .summary-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 5px;
+      }
+      .summary-box { padding: 7px 6px; }
+      .summary-label { font-size: 0.64rem; }
+      .summary-value {
+        font-size: 0.78rem;
+      }
+      .cat-row {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .btn-chip {
+        min-height: 30px;
+        padding: 4px 10px;
+        font-size: 0.72rem;
       }
     }
   </style>
@@ -303,8 +444,11 @@
   <div class="page">
     <header>
       <img src="https://nisb.kr/plugins/custom_plugin/simple_page/assets/img/branding/logo4.png?date_ver=2025-11" alt="남성초등학교 로고" class="header-logo" />
-      <h1>남성초등학교 분실물 센터</h1>
+      <h1 class="page-title">남성초등학교 분실물 센터</h1>
       <p>분실물을 한 눈에 확인하고, 잃어버린 물건을 찾아가세요!</p>
+      <div class="quick-links" aria-label="도움말">
+        <button class="btn btn-link" id="manualOpenBtn" type="button">이용 방법</button>
+      </div>
     </header>
 
     <div class="card">
@@ -321,6 +465,26 @@
           placeholder="분실물 검색 (종류, 장소, 설명 등)"
         />
         <button class="btn btn-primary" id="searchBtn">검색</button>
+        <button class="btn btn-secondary" id="resetBtn">검색/필터 지우기</button>
+      </div>
+
+      <div class="summary-row" aria-label="분실물 현황 요약">
+        <div class="summary-box">
+          <span class="summary-label">보관 중</span>
+          <span class="summary-value" id="totalCount">0</span>
+        </div>
+        <div class="summary-box">
+          <span class="summary-label">현재 표시</span>
+          <span class="summary-value" id="visibleCount">0</span>
+        </div>
+        <div class="summary-box">
+          <span class="summary-label">선택 분류</span>
+          <span class="summary-value" id="categoryLabel">전체</span>
+        </div>
+        <div class="summary-box">
+          <span class="summary-label">최근 등록</span>
+          <span class="summary-value" id="latestDate">-</span>
+        </div>
       </div>
 
       <!-- 카테고리별 필터 버튼 (주인 찾음 / 폐기 완료는 학생용에서 숨김) -->
@@ -338,9 +502,29 @@
       <div id="emptyMessage" class="empty-message" style="display:none;">
         현재 보관 중인 분실물이 없습니다.
       </div>
+      <div id="loadingMessage" class="loading-message" style="display:none;">
+        분실물 목록을 불러오는 중입니다.
+      </div>
       <button id="loadMoreBtn" class="btn btn-primary" style="margin:12px auto 0; display:none; width:100%;">
         더 보기
       </button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="manualModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">이용 방법</div>
+        <button class="modal-close" id="manualCloseBtn" aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <ul class="manual-list">
+          <li>검색창에 물건 이름, 종류, 습득 장소를 입력해 찾습니다.</li>
+          <li>필터 버튼을 누르면 해당 종류만 빠르게 모아볼 수 있습니다.</li>
+          <li>카드의 보관 장소를 확인한 뒤 해당 장소에 방문합니다.</li>
+          <li>이 화면에는 현재 보관 중인 물건만 표시됩니다.</li>
+        </ul>
+      </div>
     </div>
   </div>
 
@@ -408,7 +592,8 @@ const firebaseConfig = {
     let currentCategory = "전체";
     let lastVisible = null;
     let isLoading = false;
-    const PAGE_SIZE = 5;
+    const MAX_PUBLIC_ITEMS = 60;
+    const PAGE_SIZE = 12;
     let displayCount = PAGE_SIZE;
 
 
@@ -416,8 +601,14 @@ const firebaseConfig = {
     const emptyMessage = document.getElementById("emptyMessage");
     const searchInput = document.getElementById("searchInput");
     const searchBtn = document.getElementById("searchBtn");
+    const resetBtn = document.getElementById("resetBtn");
     const categoryButtons = document.querySelectorAll("#categoryButtons .btn-chip");
     const loadMoreBtn = document.getElementById("loadMoreBtn");
+    const loadingMessage = document.getElementById("loadingMessage");
+    const totalCount = document.getElementById("totalCount");
+    const visibleCount = document.getElementById("visibleCount");
+    const categoryLabel = document.getElementById("categoryLabel");
+    const latestDate = document.getElementById("latestDate");
 
     const detailModal = document.getElementById("detailModal");
     const modalCloseBtn = document.getElementById("modalCloseBtn");
@@ -430,6 +621,23 @@ const firebaseConfig = {
     const modalFoundTime = document.getElementById("modalFoundTime");
     const modalFinder = document.getElementById("modalFinder");
     const modalCreatedAt = document.getElementById("modalCreatedAt");
+    const manualOpenBtn = document.getElementById("manualOpenBtn");
+    const manualCloseBtn = document.getElementById("manualCloseBtn");
+    const manualModal = document.getElementById("manualModal");
+
+    function updateSummary(visibleList, filteredTotal) {
+      if (totalCount) totalCount.textContent = String(items.length);
+      if (visibleCount) visibleCount.textContent = String(filteredTotal);
+      if (categoryLabel) categoryLabel.textContent = currentCategory;
+      if (latestDate) {
+        const latest = items
+          .map((item) => item.createdAt || item.foundTime || "")
+          .filter(Boolean)
+          .sort()
+          .pop();
+        latestDate.textContent = latest ? formatDateTime(latest).slice(0, 12) : "-";
+      }
+    }
 
     function renderItems(filterText = "") {
       itemsContainer.innerHTML = "";
@@ -464,6 +672,8 @@ const firebaseConfig = {
       if (currentCategory === "전체" && !trimmed) {
         visibleList = list.slice(0, displayCount);
       }
+
+      updateSummary(visibleList, totalCount);
 
       if (!visibleList.length) {
         emptyMessage.style.display = "block";
@@ -568,6 +778,15 @@ const firebaseConfig = {
     searchBtn.addEventListener("click", () => {
       renderItems(searchInput.value);
     });
+    resetBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      currentCategory = "전체";
+      displayCount = PAGE_SIZE;
+      categoryButtons.forEach((b) =>
+        b.classList.toggle("btn-chip-active", b.dataset.category === "전체")
+      );
+      renderItems("");
+    });
     searchInput.addEventListener("keyup", (e) => {
       if (e.key === "Enter") renderItems(searchInput.value);
     });
@@ -587,24 +806,31 @@ const firebaseConfig = {
       if (e.target === detailModal) closeModal();
     });
     modalImageWrapper.addEventListener("click", closeModal);
+    manualOpenBtn.addEventListener("click", () => {
+      manualModal.style.display = "flex";
+    });
+    manualCloseBtn.addEventListener("click", () => {
+      manualModal.style.display = "none";
+    });
+    manualModal.addEventListener("click", (e) => {
+      if (e.target === manualModal) manualModal.style.display = "none";
+    });
 
     async function loadItems(isInitial = false) {
       if (isLoading) return;
       isLoading = true;
+      if (loadingMessage) loadingMessage.style.display = "block";
+      if (emptyMessage) emptyMessage.style.display = "none";
       try {
-        // 학생용 페이지에서는 Firestore에서 한 번에 전체 분실물을 불러오고,
-        // 화면에서는 '전체' 카테고리에만 페이징을 적용합니다.
-        const snapshot = await db.collection("lost_items")
-          .orderBy("createdAt", "desc")
-          .get();
-
-        // 매번 전체 목록을 다시 구성
         items = [];
-
-        if (!snapshot.empty) {
+        const seen = new Set();
+        const addSnapshotItems = (snapshot) => {
           snapshot.docs.forEach((doc) => {
+            if (items.length >= MAX_PUBLIC_ITEMS) return;
+            if (seen.has(doc.id)) return;
+            seen.add(doc.id);
             const data = doc.data() || {};
-            const item = {
+            items.push({
               id: doc.id,
               title: data.title || "",
               category: data.category || "기타",
@@ -614,25 +840,36 @@ const firebaseConfig = {
               finderName: data.finderName || "",
               createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
               imageUrl: data.imageUrl || "",
-              status: data.status || "stored"
-            };
-            // 학생용에서는 보관 중인 물건(status === "stored")만 표시
-            if (item.status === "stored") {
-              items.push(item);
-            }
+              status: "stored"
+            });
           });
+        };
+
+        const storedSnapshot = await db.collection("lost_items")
+          .where("status", "==", "stored")
+          .limit(MAX_PUBLIC_ITEMS)
+          .get();
+        addSnapshotItems(storedSnapshot);
+
+        const remainingCount = MAX_PUBLIC_ITEMS - items.length;
+        if (remainingCount > 0) {
+          const legacySnapshot = await db.collection("lost_items")
+            .where("status", "==", "보관 중")
+            .limit(remainingCount)
+            .get();
+          addSnapshotItems(legacySnapshot);
         }
 
-        // 전체 데이터를 다시 불러왔으므로 페이징 카운터를 초기화
+        items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
         displayCount = PAGE_SIZE;
         lastVisible = null;
-
         renderItems(searchInput.value);
       } catch (err) {
         console.error("분실물 불러오기 오류:", err);
         alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
       } finally {
         isLoading = false;
+        if (loadingMessage) loadingMessage.style.display = "none";
       }
     }
 
