@@ -1146,6 +1146,7 @@ const firebaseConfig = {
       const APP_SETTINGS_COLLECTION = "app_settings";
       const PLACE_OPTIONS_DOC = "place_options";
       const BOOTSTRAP_ADMIN_EMAILS = ["leens@nsworld.net"];
+      const DEFAULT_AUTHORIZED_EMAIL_HASHES_2026 = new Set(["de998e21df289b0c718d0345306432ab22bcfba974c1a1d9571d25a7793304be", "b24c2d3400378031eb22328289e16097235924dc4cc3616c00de4e8dc59de73b", "1249359aabafd352dbb6127a2a0605add595c92d5431324e3d16af43f056d611", "db770d8fd1f24283e21528c8f99fa6596fbbf74291a328f68d0846e845200141", "300cde32c803a1f85d3a74a20b6402a16b01f790551c022a3fae9d18075c3482", "f171d299ad1e7f008e81c7b557f9eb68eb52730dd3343029e84aae94e0accfe8", "ca50d830c32f8c37aa79bf40cadc55616f61673cfc5f8fb167116fb63ad37e65", "efc06b1ad147f1dc63f54112ee8d4443268b300805cb9e070973648b428151f2", "dedfd21872e6ab8a673d898c0f7f4fb8e0ba57f4a325377f74a040374a7e44e1", "5fd9719612d90aae272f55ab9d2777c08c912e67bc514375d6a942b7f51164a4", "c7b6daeb5484b81cd6e612b77cb66614b9ecfea08753127d3df62ea4f9c3e619", "55acc6603c35446d18ecd2ec6b515a614f9035eb15a5cc72fd5448f4dccfb541", "b3afcc39100aaf749013cc4387d41aea8af603163457e65a7dbb6aa88d7000b2", "4e7fb7b45523125439d715d3198a5d9ac01966aee5e1b22076075695c1505365", "24af3c473602b51918dffb508d82a8339057de0bed1c4ad42d441984d54a8b83", "79ed51456194ceeb4b501b897ed92679485bdfac5f3fe33296a862bddd520210", "e1ae3f6b270949f291efd4e45c3027ce8d90a1c1ba12127e4b54449427cf0569", "39fd1b7901785140e84913ac7aeae935852fbf9882b9555c00e4911f083fbbf5", "6a5540517387ab0f1b73001c7092dc4e9d5d608ad0119c1f867c6245a1be1972", "80e6266e7739de10afb74285c133a8ae914326faab02dbb5114f95d0d2c3cc61", "a28c857e0bb8bf0ef81d6dd0377c0bb17241e320263c37962a7808fd7574f0a0", "7aa737d8e9ffb9425d2509190ca5f2dffb64fee2d1b49acc65686083809ada58", "ab8d0c55ada9525127ca73e3c61387b11729cb506b9d0e2122fa472c22573abe", "b2c60ed49234d83e7090bcc6a943447b1e8040c0105a3c6ca07194b9db19cece", "ce6460b0f70f393d431a12a5d3b256103210464584cacd44b51159ecd12df9dd", "03f55929c7b0417c4e8b249bf4bc8f1e455dac695c4db0e8af8c37571650b52c", "e11c68bc24402270062d7684b98c9ff14aea625c1b05985cf290716b35f308b9", "15c37604a34952d16bca9a6817c60a022dec472633db299663c75b2b5f6654d1", "488f7ae2621b042a257570fa45f3bf4673ade96186b607bedc676c7c5825314f", "c6b48c79100d604fc56a4fc89d4e063a19a60af0418334b6ca54363e94c45ce1", "0fd95a576bed1838b22efaf4fd308b4517ce8126e40d6a19a9ae3eb3616e7f18", "556bef3768351c795c3ad77f911e73c81a8ce2c70129f310dd3422320b5ea061", "26fa0326f6babf38a2d3dfd8272db58964b6d53d0c236ee412c248661bd18cf8", "6d401f0f5f669be9c6e36856267fe356c03e0441157635b18e88937292757d0b", "35fa9355a8e5d691acf56939c0c7eabf5ad8c753cd751d651cdd4f2698a0fced", "c21450325148e6754dd8697ba9b09bfe62d74abc58249cc5ba3bf96c29c18b7f", "fa98d93a4ec9bd211846dbf912b4dee976d851765e433ed2dfff26f7b47bb761", "7bf2ea809df9619e7e3b9bfa2044529ea3ede66ab5f406160b5a5ae3b0e8a7e8", "69a87128e7f5c612a1c3a0a405337f8d949da157c412ea3c2efe08ee8734343f", "966f9d947874446f3681e6b5bfe9602deed608bc089e1a8660fa8589d8bb706f", "45cb7e6513d945c96554abf27a04d8d57ccc8a87fff9d87d5c1453a5415d5637", "3ce37e8b9333d6923efb87590f649d1c76ffa5ac2a70f821bb028f5bdf5685f7", "81723cb66b858af0b2ee82416227ed9a039a1fa5c83c4621f936686aa607e266", "292615ed6b5d3845c3ffd82e27cc2487c32c5e2ad3eab1ddface996ac9ff696f", "346fb0d001c072d223e140b393d7b6f2f74a3c126114c006b0554b3d5a2b2553", "fbf9476e97074b22ee5a8bfb5f51ab33df143b9feade0839f41ac28ead92a9dc", "4f564af3e99f2a5e5e76198276095a03a0e42456f06b9ed989f0dd04f397c0ce", "54112035888b8661ae7b1562c45da17199503cfaf9222485d0e8cbfafab0d9ad", "f050efc87418baaced59e1862ee4e4617303d09c40a60cc3d5b74c3dc1e0ac31", "3ea162ac0e6ebc44f4499a05826fa5048d2e2f93fffce0db8a6fcbb45a25a0f5", "df1c38fbd54cb2b98a12a51bad43c3efe013fe8e03f71cd32f359e9356fc9e80", "ba610072b537baa065ab79b2749d619a29cd328be689e86fbc0100835ad9f97d", "6d658e89ee5f15d12d9edf8c9c2138a3966939ec443e592fb945333f2e526464", "883e4a3061018dca2cfb5c19896b4906c1db05f17c1d7e74216828308f42250c", "8e73f2282d822aae442d7b9e47580a6dbe02a58e47c9e08c94cbfc1510bd36f9", "ee7458f7ce6ff2be4dbb9199167ddca2c1f0e51481a33c56e54d5409106c558f", "3d0c695a6fcf3685fc296a19d4ebb9a887f500d6b6e388cbe1d1c157ab0986ec", "001ad404dcfd31869b0e728dc83be19262287095d9254bb01380ee3d308d02d9", "46f88ac87154646100ee7ea53d9ece5406d26282fe2daba71165c7cf109a594b", "66a142aec5489d235351b685476289e0a68e2a9ddbd8664c672809914ed2d5e6"]);
       const DEFAULT_STORAGE_LOCATIONS = ["교무실", "행정실", "보건실", "상담실", "가온누리"];
       const DEFAULT_FOUND_PLACES = ["운동장", "강당", "급식실", "복도", "교실", "도서관"];
 
@@ -1317,21 +1318,46 @@ const firebaseConfig = {
         return normalizeEmail(email).endsWith("@nsworld.net");
       }
 
+      async function sha256Hex(text) {
+        const bytes = new TextEncoder().encode(text);
+        const hash = await crypto.subtle.digest("SHA-256", bytes);
+        return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      async function getDefaultAuthorizedUser(email) {
+        const normalized = normalizeEmail(email);
+        if (!normalized || !isValidSchoolEmail(normalized)) return null;
+        if (isBootstrapAdmin(normalized)) {
+          return { email: normalized, role: "admin", active: true, fallback: true };
+        }
+        const hash = await sha256Hex(normalized);
+        if (DEFAULT_AUTHORIZED_EMAIL_HASHES_2026.has(hash)) {
+          return { email: normalized, role: "teacher", active: true, fallback: true };
+        }
+        return null;
+      }
+
       async function getAuthorizedUser(email) {
         const normalized = normalizeEmail(email);
         if (!normalized) return null;
         if (isBootstrapAdmin(normalized)) {
           return { email: normalized, role: "admin", active: true, bootstrap: true };
         }
-        const doc = await db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).get();
-        if (!doc.exists) return null;
-        const data = doc.data() || {};
-        if (data.active === false) return null;
-        return {
-          email: normalized,
-          role: data.role === "admin" ? "admin" : "teacher",
-          active: true
-        };
+        try {
+          const doc = await db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).get();
+          if (doc.exists) {
+            const data = doc.data() || {};
+            if (data.active === false) return null;
+            return {
+              email: normalized,
+              role: data.role === "admin" ? "admin" : "teacher",
+              active: true
+            };
+          }
+        } catch (err) {
+          console.warn("허용 계정 서버 목록 확인 실패, 기본 명단으로 확인합니다:", err);
+        }
+        return getDefaultAuthorizedUser(normalized);
       }
 
       // ===================== DOM 요소 =====================
