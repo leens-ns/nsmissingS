@@ -258,6 +258,44 @@
     .cleanup-list {
       display: grid;
       gap: 8px;
+      min-height: 74px;
+      margin-top: 10px;
+    }
+    .cleanup-workbench {
+      display: grid;
+      gap: 10px;
+    }
+    .cleanup-header {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(320px, 1.45fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .section-kicker {
+      margin: -4px 0 0;
+      color: #64748b;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .cleanup-controls {
+      display: grid;
+      grid-template-columns: minmax(150px, 1fr) auto auto auto;
+      gap: 7px;
+      align-items: stretch;
+    }
+    .cleanup-controls .btn,
+    .cleanup-controls select {
+      min-height: 34px;
+    }
+    .cleanup-note {
+      margin: 0;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 0.8rem;
+      line-height: 1.5;
     }
     .cleanup-main {
       display: flex;
@@ -331,6 +369,25 @@
       padding-top: 8px;
       border-top: 1px solid #eef2f7;
     }
+    .folded-help {
+      margin-top: 2px;
+      border-top: 1px solid #eef2f7;
+      padding-top: 8px;
+      color: #475569;
+      font-size: 0.82rem;
+    }
+    .folded-help summary {
+      width: fit-content;
+      cursor: pointer;
+      color: #475569;
+      font-weight: 500;
+      list-style-position: inside;
+    }
+    .folded-help ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      line-height: 1.65;
+    }
     .section-help strong, .check-list strong, .csv-help strong {
       color: #1f2937;
       font-weight: 600;
@@ -355,6 +412,7 @@
       .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .admin-grid { grid-template-columns: 1fr 1fr; }
       .admin-section.full-width { grid-column: 1 / -1; }
+      #securityPanel { grid-column: 1 / -1; }
     }
     @media (max-width: 640px) {
       .page { padding: 12px; }
@@ -374,6 +432,10 @@
       }
       .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .cleanup-header,
+      .cleanup-controls {
+        grid-template-columns: 1fr;
       }
       .authorized-user {
         align-items: stretch;
@@ -481,9 +543,13 @@
       </section>
 
       <section id="cleanupPanel" class="admin-section full-width">
-        <div class="toolbar" style="justify-content:space-between; margin-bottom:10px;">
-          <h2 class="section-title">분실물 일괄 정리</h2>
-          <div class="toolbar">
+        <div class="cleanup-workbench">
+          <div class="cleanup-header">
+            <div>
+              <h2 class="section-title">분실물 일괄 정리</h2>
+              <p class="section-kicker">상태별로 대상을 불러온 뒤 선택 항목을 정리합니다.</p>
+            </div>
+            <div class="cleanup-controls">
             <select id="cleanupStatusFilter" aria-label="정리 대상 상태">
               <option value="found">주인 찾음</option>
               <option value="discarded">폐기 완료</option>
@@ -494,30 +560,37 @@
             <button id="loadCleanupItemsBtn" class="btn btn-outline" type="button">대상 불러오기</button>
             <button id="selectAllCleanupItemsBtn" class="btn btn-muted" type="button">전체 선택</button>
             <button id="deleteSelectedItemsBtn" class="btn btn-danger" type="button" disabled>선택 항목 정리</button>
+            </div>
           </div>
+
+          <p class="cleanup-note">일반 항목은 휴지통으로 이동하고, 휴지통 항목만 영구 삭제합니다. 휴지통의 물건은 교사용 화면에서 복구할 수 있습니다.</p>
+
+          <div id="cleanupItemsList" class="cleanup-list">
+            <div class="empty-message">관리자로 로그인한 뒤 정리 대상을 불러오면 목록이 표시됩니다.</div>
+          </div>
+
+          <details class="folded-help">
+            <summary>정리 기준 보기</summary>
+            <ul>
+              <li>상태를 선택한 뒤 대상 불러오기를 누르면 목록이 표시됩니다.</li>
+              <li>일반 항목은 휴지통으로 이동되고, 휴지통 상태에서만 영구 삭제됩니다.</li>
+              <li>학생 조회 화면은 무료 사용량 관리를 위해 보관 중 최대 60개를 기준으로 운영합니다.</li>
+            </ul>
+          </details>
         </div>
-        <div class="notice">
-          일반 항목은 휴지통으로 이동하고, 휴지통 항목만 영구 삭제합니다. 휴지통의 물건은 교사용 등록/관리 화면에서도 복구할 수 있습니다.
-        </div>
-        <div id="cleanupItemsList" class="cleanup-list">
-          <div class="empty-message">관리자로 로그인한 뒤 정리 대상을 불러오면 목록이 표시됩니다.</div>
-        </div>
-        <ul class="section-help">
-          <li><strong>필요한 상태</strong>를 먼저 선택한 뒤 대상 불러오기를 눌러 목록을 확인합니다.</li>
-          <li>일반 항목은 휴지통으로 이동되고, <strong>휴지통 상태에서만 영구 삭제</strong>됩니다.</li>
-          <li>학생 조회 화면은 무료 사용량 관리를 위해 <strong>보관 중 최대 60개</strong>를 기준으로 운영합니다.</li>
-        </ul>
       </section>
 
       <section id="securityPanel" class="admin-section">
-        <h2 class="section-title">보안 점검</h2>
-        <ul class="check-list">
-          <li><strong>Firebase 결제 사용 안 함</strong> 또는 예산 알림 설정 확인</li>
-          <li><strong>Google 로그인</strong> 제공업체만 사용하도록 Firebase Auth 확인</li>
-          <li><code>firestore.rules</code> 배포 여부 확인</li>
-          <li>허용 계정 목록에 <strong>퇴직자나 불필요 계정</strong>이 없는지 확인</li>
-          <li>영구 삭제 전 <strong>휴지통에서 복구 가능 여부</strong> 확인</li>
-        </ul>
+        <details class="folded-help" open>
+          <summary>보안 점검</summary>
+          <ul class="check-list">
+            <li>Firebase 결제 사용 안 함 또는 예산 알림 설정 확인</li>
+            <li>Firebase Auth는 Google 로그인 제공업체만 사용</li>
+            <li><code>firestore.rules</code> 배포 여부 확인</li>
+            <li>허용 계정 목록에 퇴직자나 불필요 계정이 없는지 확인</li>
+            <li>영구 삭제 전 휴지통에서 복구 가능 여부 확인</li>
+          </ul>
+        </details>
       </section>
       </div>
     </main>
