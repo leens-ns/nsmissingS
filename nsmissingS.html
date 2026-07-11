@@ -380,6 +380,46 @@
       color: #475569;
       line-height: 1.7;
     }
+    .update-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: #ccfbf1;
+      color: #0f766e;
+      font-size: 0.78rem;
+      margin-bottom: 8px;
+    }
+    .update-summary {
+      margin: 0 0 10px;
+      color: #475569;
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+    .update-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #334155;
+      font-size: 0.86rem;
+      line-height: 1.7;
+    }
+    .update-note {
+      margin: 12px 0 0;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 0.8rem;
+      line-height: 1.55;
+    }
+    .update-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
 
     @media (min-width: 768px) {
       .page-title { font-size: var(--page-title-size-wide); }
@@ -447,6 +487,7 @@
       <h1 class="page-title">남성초등학교 분실물 센터</h1>
       <p>분실물을 한 눈에 확인하고, 잃어버린 물건을 찾아가세요!</p>
       <div class="quick-links" aria-label="도움말">
+        <button class="btn btn-link" id="updateNoticeOpenBtn" type="button">업데이트 안내</button>
         <button class="btn btn-link" id="manualOpenBtn" type="button">이용 방법</button>
       </div>
     </header>
@@ -524,6 +565,34 @@
           <li>카드의 보관 장소를 확인한 뒤 해당 장소에 방문합니다.</li>
           <li>이 화면에는 현재 보관 중인 물건만 표시됩니다.</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="updateNoticeModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">v2.1 업데이트 안내</div>
+        <button class="modal-close" id="updateNoticeCloseBtn" aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="update-badge">v2.1 새로 바뀐 점</div>
+        <p class="update-summary">
+          조회 화면을 더 보기 쉽게 정리하고, 보관 중인 물건 표시 기준을 안정화했습니다.
+        </p>
+        <ul class="update-list">
+          <li>학생/학부모용 조회 화면은 보관 중인 분실물만 표시되도록 유지됩니다.</li>
+          <li>무료 사용량 관리를 위해 보관 중 분실물은 최대 60개 기준으로 표시됩니다.</li>
+          <li>검색, 분류 필터, 보관 장소 확인 흐름을 더 단순하게 정리했습니다.</li>
+          <li>업데이트 안내는 일주일 동안 표시되며 원하면 끌 수 있습니다.</li>
+        </ul>
+        <p class="update-note">
+          분실물이 보이면 카드의 보관 장소를 확인한 뒤 해당 장소에 방문해 주세요.
+        </p>
+        <div class="update-actions">
+          <button class="btn btn-secondary" id="updateNoticeTodayBtn" type="button">오늘 하루 보지 않음</button>
+          <button class="btn btn-link" id="updateNoticeNeverBtn" type="button">다시 보지 않음</button>
+        </div>
       </div>
     </div>
   </div>
@@ -624,6 +693,61 @@ const firebaseConfig = {
     const manualOpenBtn = document.getElementById("manualOpenBtn");
     const manualCloseBtn = document.getElementById("manualCloseBtn");
     const manualModal = document.getElementById("manualModal");
+    const updateNoticeOpenBtn = document.getElementById("updateNoticeOpenBtn");
+    const updateNoticeCloseBtn = document.getElementById("updateNoticeCloseBtn");
+    const updateNoticeModal = document.getElementById("updateNoticeModal");
+    const updateNoticeTodayBtn = document.getElementById("updateNoticeTodayBtn");
+    const updateNoticeNeverBtn = document.getElementById("updateNoticeNeverBtn");
+    const UPDATE_NOTICE_ID = "student-update-v2.1-2026-07-12";
+    const UPDATE_NOTICE_PUBLISHED_AT = "2026-07-12T00:00:00+09:00";
+    const UPDATE_NOTICE_SHOW_DAYS = 7;
+    const UPDATE_NOTICE_NEVER_KEY = "nsmissing.studentUpdateNotice.never";
+    const UPDATE_NOTICE_HIDE_UNTIL_KEY = "nsmissing.studentUpdateNotice.hideUntil";
+
+    function getLocalStorageItem(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function setLocalStorageItem(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (err) {
+        // 저장이 막힌 환경에서는 이번 화면에서만 닫히도록 둡니다.
+      }
+    }
+
+    function isUpdateNoticePostingPeriod() {
+      const publishedAt = new Date(UPDATE_NOTICE_PUBLISHED_AT);
+      const expiresAt = new Date(publishedAt.getTime() + UPDATE_NOTICE_SHOW_DAYS * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      return now >= publishedAt && now < expiresAt;
+    }
+
+    function getTodayEndIso() {
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      return end.toISOString();
+    }
+
+    function openUpdateNotice() {
+      if (updateNoticeModal) updateNoticeModal.style.display = "flex";
+    }
+
+    function closeUpdateNotice() {
+      if (updateNoticeModal) updateNoticeModal.style.display = "none";
+    }
+
+    function shouldAutoOpenUpdateNotice() {
+      if (!isUpdateNoticePostingPeriod()) return false;
+      if (getLocalStorageItem(UPDATE_NOTICE_NEVER_KEY) === UPDATE_NOTICE_ID) return false;
+      const hideUntil = getLocalStorageItem(UPDATE_NOTICE_HIDE_UNTIL_KEY);
+      if (hideUntil && new Date(hideUntil) > new Date()) return false;
+      return true;
+    }
 
     function updateSummary(visibleList, filteredTotal) {
       if (totalCount) totalCount.textContent = String(items.length);
@@ -815,6 +939,35 @@ const firebaseConfig = {
     manualModal.addEventListener("click", (e) => {
       if (e.target === manualModal) manualModal.style.display = "none";
     });
+    if (updateNoticeOpenBtn && !isUpdateNoticePostingPeriod()) {
+      updateNoticeOpenBtn.style.display = "none";
+    }
+    if (updateNoticeOpenBtn) {
+      updateNoticeOpenBtn.addEventListener("click", openUpdateNotice);
+    }
+    if (updateNoticeCloseBtn) {
+      updateNoticeCloseBtn.addEventListener("click", closeUpdateNotice);
+    }
+    if (updateNoticeModal) {
+      updateNoticeModal.addEventListener("click", (e) => {
+        if (e.target === updateNoticeModal) closeUpdateNotice();
+      });
+    }
+    if (updateNoticeTodayBtn) {
+      updateNoticeTodayBtn.addEventListener("click", () => {
+        setLocalStorageItem(UPDATE_NOTICE_HIDE_UNTIL_KEY, getTodayEndIso());
+        closeUpdateNotice();
+      });
+    }
+    if (updateNoticeNeverBtn) {
+      updateNoticeNeverBtn.addEventListener("click", () => {
+        setLocalStorageItem(UPDATE_NOTICE_NEVER_KEY, UPDATE_NOTICE_ID);
+        closeUpdateNotice();
+      });
+    }
+    if (shouldAutoOpenUpdateNotice()) {
+      setTimeout(openUpdateNotice, 250);
+    }
 
     async function loadItems(isInitial = false) {
       if (isLoading) return;
