@@ -494,6 +494,9 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
+    .update-modal {
+      max-width: min(960px, calc(100vw - 64px));
+    }
     .modal-header {
       display: flex;
       justify-content: space-between;
@@ -714,6 +717,9 @@
       .page-title {
         font-size: var(--page-title-size-mobile);
       }
+      .update-modal {
+        max-width: 100%;
+      }
       .quick-links {
         align-items: stretch;
       }
@@ -730,6 +736,8 @@
       color: #475569;
       font-size: 0.86rem;
       line-height: 1.6;
+      word-break: keep-all;
+      overflow-wrap: break-word;
     }
     .update-badge {
       display: inline-flex;
@@ -748,6 +756,11 @@
       color: #334155;
       font-size: 0.86rem;
       line-height: 1.7;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+    .update-list li {
+      margin-bottom: 3px;
     }
     .update-note {
       margin: 12px 0 0;
@@ -936,7 +949,7 @@
   </div>
 
   <div class="modal-overlay" id="updateNoticeModal">
-    <div class="modal">
+    <div class="modal update-modal">
       <div class="modal-header">
         <div class="modal-title">v2.1 업데이트 안내</div>
         <button class="modal-close" id="updateNoticeCloseBtn" aria-label="닫기">×</button>

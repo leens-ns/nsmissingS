@@ -1,0 +1,19 @@
+{
+  "name": "남성초등학교 분실물 조회",
+  "short_name": "분실물 조회",
+  "description": "남성초등학교 학생/학부모용 분실물 조회 화면",
+  "lang": "ko-KR",
+  "start_url": "nsmissingS.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5fb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

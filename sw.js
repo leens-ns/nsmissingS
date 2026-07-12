@@ -1,8 +1,10 @@
-const CACHE_NAME = "nsmissing-teacher-v2";
+const CACHE_NAME = "nsmissing-app-v3";
 const SHELL_FILES = [
   "./",
   "./nsibmistchr.html",
+  "./nsmissingS.html",
   "./manifest.webmanifest",
+  "./manifest-student.webmanifest",
   "./app-icon.svg"
 ];
 

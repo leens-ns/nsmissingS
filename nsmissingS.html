@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <title>남성초등학교 분실물 센터 - 학생용</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest-student.webmanifest" />
   <style>
     :root {
       --page-title-size: 1.55rem;
@@ -311,6 +313,9 @@
       display: flex;
       flex-direction: column;
     }
+    .update-modal {
+      max-width: min(960px, calc(100vw - 64px));
+    }
     .modal-header {
       display: flex;
       justify-content: space-between;
@@ -374,6 +379,23 @@
       background: #ccfbf1;
       box-shadow: 0 1px 3px rgba(15, 118, 110, 0.12);
     }
+    .quick-links .install-btn {
+      background: #ffffff;
+      color: #475569;
+      border-color: #dbe3ef;
+      box-shadow: none;
+    }
+    .quick-links .install-btn.is-ready {
+      background: #fff7ed;
+      color: #9a3412;
+      border-color: #fed7aa;
+    }
+    .quick-links .install-btn.is-installed {
+      background: #f1f5f9;
+      color: #64748b;
+      border-color: #cbd5e1;
+      cursor: default;
+    }
     .manual-list {
       margin: 0;
       padding-left: 18px;
@@ -396,6 +418,8 @@
       color: #475569;
       font-size: 0.86rem;
       line-height: 1.6;
+      word-break: keep-all;
+      overflow-wrap: break-word;
     }
     .update-list {
       margin: 0;
@@ -403,6 +427,11 @@
       color: #334155;
       font-size: 0.86rem;
       line-height: 1.7;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+    .update-list li {
+      margin-bottom: 3px;
     }
     .update-note {
       margin: 12px 0 0;
@@ -477,6 +506,9 @@
         padding: 4px 10px;
         font-size: 0.72rem;
       }
+      .update-modal {
+        max-width: 100%;
+      }
     }
   </style>
 </head>
@@ -487,6 +519,7 @@
       <h1 class="page-title">남성초등학교 분실물 센터</h1>
       <p>분실물을 한 눈에 확인하고, 잃어버린 물건을 찾아가세요!</p>
       <div class="quick-links" aria-label="도움말">
+        <button class="btn btn-link install-btn" id="appInstallBtn" type="button">앱 설치</button>
         <button class="btn btn-link" id="updateNoticeOpenBtn" type="button">업데이트 안내</button>
         <button class="btn btn-link" id="manualOpenBtn" type="button">이용 방법</button>
       </div>
@@ -570,7 +603,7 @@
   </div>
 
   <div class="modal-overlay" id="updateNoticeModal">
-    <div class="modal">
+    <div class="modal update-modal">
       <div class="modal-header">
         <div class="modal-title">v2.1 업데이트 안내</div>
         <button class="modal-close" id="updateNoticeCloseBtn" aria-label="닫기">×</button>
@@ -693,6 +726,7 @@ const firebaseConfig = {
     const manualOpenBtn = document.getElementById("manualOpenBtn");
     const manualCloseBtn = document.getElementById("manualCloseBtn");
     const manualModal = document.getElementById("manualModal");
+    const appInstallBtn = document.getElementById("appInstallBtn");
     const updateNoticeOpenBtn = document.getElementById("updateNoticeOpenBtn");
     const updateNoticeCloseBtn = document.getElementById("updateNoticeCloseBtn");
     const updateNoticeModal = document.getElementById("updateNoticeModal");
@@ -703,6 +737,57 @@ const firebaseConfig = {
     const UPDATE_NOTICE_SHOW_DAYS = 7;
     const UPDATE_NOTICE_NEVER_KEY = "nsmissing.studentUpdateNotice.never";
     const UPDATE_NOTICE_HIDE_UNTIL_KEY = "nsmissing.studentUpdateNotice.hideUntil";
+    let deferredInstallPrompt = null;
+
+    function isStandaloneApp() {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    }
+
+    function updateInstallButtonState() {
+      if (!appInstallBtn) return;
+      appInstallBtn.classList.remove("is-ready", "is-installed");
+      appInstallBtn.disabled = false;
+      if (isStandaloneApp()) {
+        appInstallBtn.textContent = "앱 설치됨";
+        appInstallBtn.classList.add("is-installed");
+        appInstallBtn.disabled = true;
+      } else if (deferredInstallPrompt) {
+        appInstallBtn.textContent = "앱 설치";
+        appInstallBtn.classList.add("is-ready");
+      } else {
+        appInstallBtn.textContent = "앱 설치";
+      }
+    }
+
+    function showManualInstallGuide() {
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || "");
+      if (location.protocol === "file:") {
+        alert("앱 설치는 배포된 HTTPS 주소나 테스트 서버 주소에서 사용할 수 있습니다.\n현재는 파일로 직접 연 상태라 설치창이 뜨지 않을 수 있습니다.");
+        return;
+      }
+      if (isIos) {
+        alert("iPhone/iPad에서는 Safari 공유 버튼을 누른 뒤 '홈 화면에 추가'를 선택해 주세요.");
+        return;
+      }
+      alert("이 브라우저에서 자동 설치창을 아직 제공하지 않았습니다.\n주소창 오른쪽의 설치 아이콘이나 브라우저 메뉴의 '앱 설치'를 확인해 주세요.");
+    }
+
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      navigator.serviceWorker.register("sw.js").catch((err) => {
+        console.warn("앱 설치 준비 중 오류:", err);
+      });
+    }
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      updateInstallButtonState();
+    });
+
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      updateInstallButtonState();
+    });
 
     function getLocalStorageItem(key) {
       try {
@@ -939,6 +1024,20 @@ const firebaseConfig = {
     manualModal.addEventListener("click", (e) => {
       if (e.target === manualModal) manualModal.style.display = "none";
     });
+    if (appInstallBtn) {
+      appInstallBtn.addEventListener("click", async () => {
+        if (isStandaloneApp()) return;
+        if (!deferredInstallPrompt) {
+          showManualInstallGuide();
+          return;
+        }
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        updateInstallButtonState();
+      });
+      updateInstallButtonState();
+    }
     if (updateNoticeOpenBtn && !isUpdateNoticePostingPeriod()) {
       updateNoticeOpenBtn.style.display = "none";
     }
