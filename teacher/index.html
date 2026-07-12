@@ -917,8 +917,8 @@
       <div class="section-header-row">
         <div class="section-title" style="margin-top:16px;">분실물 현황</div>
         <div id="bulkActions" class="bulk-actions" style="display:none;">
-          <button id="bulkFoundBtn" class="btn btn-bulk-found" disabled>주인 찾기</button>
-          <button id="bulkDeleteBtn" class="btn btn-bulk-delete" disabled>삭제</button>
+          <button id="bulkFoundBtn" class="btn btn-bulk-found" disabled>일괄 주인 찾기</button>
+          <button id="bulkDeleteBtn" class="btn btn-bulk-delete" disabled>일괄 삭제</button>
         </div>
       </div>
       <div id="itemsContainer"></div>
@@ -1532,11 +1532,11 @@ const firebaseConfig = {
       function updateBulkButtonLabel() {
         if (!bulkFoundBtn) return;
         if (currentCategory === "주인 찾음" || currentCategory === "폐기 완료" || currentCategory === "휴지통") {
-          bulkFoundBtn.textContent = "재등록";
+          bulkFoundBtn.textContent = "일괄 재등록";
         bulkFoundBtn.classList.add("btn-bulk-reregister");
         bulkFoundBtn.classList.remove("btn-bulk-found");
         } else {
-          bulkFoundBtn.textContent = "주인 찾기";
+          bulkFoundBtn.textContent = "일괄 주인 찾기";
         bulkFoundBtn.classList.add("btn-bulk-found");
         bulkFoundBtn.classList.remove("btn-bulk-reregister");
         }
