@@ -1,4 +1,4 @@
-const CACHE_NAME = "nsmissing-app-v3";
+const CACHE_NAME = "nsmissing-app-v4";
 const SHELL_FILES = [
   "./",
   "./nsibmistchr.html",
@@ -6,7 +6,11 @@ const SHELL_FILES = [
   "./manifest.webmanifest",
   "./manifest-student.webmanifest",
   "./app-icon.svg",
-  "./app-icon-student.svg"
+  "./app-icon-student.svg",
+  "./app-icon-teacher-192.png",
+  "./app-icon-teacher-512.png",
+  "./app-icon-student-192.png",
+  "./app-icon-student-512.png"
 ];
 
 self.addEventListener("install", (event) => {
