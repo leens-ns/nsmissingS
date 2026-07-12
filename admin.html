@@ -38,6 +38,11 @@
     button, input, select, textarea {
       font: inherit;
     }
+    html,
+    body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
     body {
       margin: 0;
       font-family: "Paperlogy", "페이퍼로지", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -180,7 +185,7 @@
     }
     .account-layout {
       display: grid;
-      grid-template-columns: minmax(300px, 0.85fr) minmax(420px, 1.15fr);
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
       gap: 12px;
       align-items: start;
     }
@@ -282,7 +287,7 @@
     .authorized-user, .cleanup-item {
       box-shadow: none;
       display: grid;
-      grid-template-columns: minmax(170px, 0.9fr) minmax(360px, 1.25fr);
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
       gap: 10px;
       align-items: center;
       padding: 9px 10px;
@@ -290,16 +295,17 @@
     }
     .authorized-user small { color: #64748b; }
     .authorized-main {
-      min-width: 180px;
+      min-width: 0;
       line-height: 1.45;
       word-break: break-all;
     }
     .authorized-edit {
       display: grid;
-      grid-template-columns: minmax(110px, 1fr) 100px auto auto;
+      grid-template-columns: minmax(0, 1fr) minmax(84px, 100px) auto auto;
       gap: 6px;
       align-items: center;
       flex: 1;
+      min-width: 0;
     }
     .authorized-edit input,
     .authorized-edit select {
@@ -392,6 +398,22 @@
       gap: 8px;
       align-content: start;
     }
+    .place-column .compact-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(58px, 72px);
+      gap: 7px;
+      width: 100%;
+      min-width: 0;
+      margin-bottom: 8px;
+    }
+    .place-column .compact-row input,
+    .place-column .compact-row .btn {
+      width: 100%;
+      min-width: 0;
+    }
+    .place-column .compact-row .btn {
+      padding-inline: 8px;
+    }
     .place-label {
       margin: 0;
       color: #334155;
@@ -403,15 +425,20 @@
       flex-wrap: wrap;
       gap: 7px;
       min-height: 36px;
+      width: 100%;
+      max-width: 100%;
       padding: 8px;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       background: #f8fafc;
+      overflow: hidden;
     }
     .place-chip {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      min-width: 0;
+      max-width: 100%;
       min-height: 30px;
       padding: 5px 8px 5px 10px;
       border: 1px solid #cbd5e1;
@@ -419,8 +446,17 @@
       background: #ffffff;
       color: #334155;
       font-size: 0.82rem;
+      overflow-wrap: anywhere;
+    }
+    .place-chip span {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      overflow-wrap: anywhere;
     }
     .place-chip button {
+      flex: 0 0 auto;
       width: 22px;
       height: 22px;
       padding: 0;
@@ -487,7 +523,7 @@
       .admin-section.full-width { grid-column: 1 / -1; }
       #securityPanel { grid-column: 1 / -1; }
     }
-    @media (max-width: 980px) {
+    @media (max-width: 1100px) {
       .account-layout,
       .place-columns {
         grid-template-columns: 1fr;
@@ -547,6 +583,9 @@
       }
       .compact-row .btn {
         flex: 0 0 auto;
+      }
+      .place-column .compact-row {
+        grid-template-columns: minmax(0, 1fr) 60px;
       }
     }
   </style>
