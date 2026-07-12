@@ -222,6 +222,26 @@
     .authorized-list {
       display: grid;
       gap: 8px;
+      max-height: 430px;
+      overflow: auto;
+      padding-right: 3px;
+      overscroll-behavior: contain;
+    }
+    .account-tools {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) minmax(220px, 1.4fr);
+      gap: 8px;
+      align-items: center;
+      margin: 8px 0;
+    }
+    .account-summary {
+      color: #64748b;
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+    .account-search {
+      width: 100%;
+      flex-basis: auto;
     }
     .authorized-user, .cleanup-item {
       box-shadow: none;
@@ -444,6 +464,12 @@
       .authorized-edit {
         grid-template-columns: 1fr;
       }
+      .account-tools {
+        grid-template-columns: 1fr;
+      }
+      .authorized-list {
+        max-height: 360px;
+      }
       input, select {
         flex-basis: 100%;
       }
@@ -505,6 +531,10 @@
             <button id="downloadCsvTemplateBtn" class="btn btn-muted" type="button">양식 파일 받기</button>
           </div>
           <p class="csv-help">CSV 열은 <strong>이메일, 권한, 이름</strong> 순서입니다. 권한은 <strong>교사</strong> 또는 <strong>관리자</strong>를 입력합니다. 삭제는 이메일 열만 있어도 처리됩니다. 내려받는 양식은 엑셀에서 한글이 깨지지 않도록 저장됩니다.</p>
+        </div>
+        <div class="account-tools">
+          <div id="authorizedUsersSummary" class="account-summary">허용 계정 목록을 불러오면 계정 수가 표시됩니다.</div>
+          <input id="authorizedSearchInput" class="account-search" type="search" placeholder="이메일, 이름, 권한으로 검색" />
         </div>
         <div id="authorizedUsersList" class="authorized-list">
           <div class="empty-message">관리자로 로그인하면 허용 계정 목록이 표시됩니다.</div>
@@ -611,6 +641,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((err) => {
+      console.warn("로그인 유지 설정 오류:", err);
+    });
     const AUTHORIZED_USERS_COLLECTION = "authorized_users";
     const APP_SETTINGS_COLLECTION = "app_settings";
     const PLACE_OPTIONS_DOC = "place_options";
@@ -625,6 +658,8 @@
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const authorizedUsersList = document.getElementById("authorizedUsersList");
+    const authorizedUsersSummary = document.getElementById("authorizedUsersSummary");
+    const authorizedSearchInput = document.getElementById("authorizedSearchInput");
     const csvFileInput = document.getElementById("csvFileInput");
     const cleanupItemsList = document.getElementById("cleanupItemsList");
     const cleanupStatusFilter = document.getElementById("cleanupStatusFilter");
@@ -638,6 +673,7 @@
 
     let cleanupItems = [];
     let selectedCleanupIds = new Set();
+    let authorizedUsersCache = [];
     let storagePlaceOptions = DEFAULT_STORAGE_LOCATIONS.slice();
     let foundPlaceOptions = DEFAULT_FOUND_PLACES.slice();
 
@@ -941,56 +977,74 @@
         if (!users.some((user) => normalizeEmail(user.email || user.id) === "leens@nsworld.net")) {
           users.unshift({ id: "leens@nsworld.net", email: "leens@nsworld.net", role: "admin", bootstrap: true });
         }
-        authorizedUsersList.innerHTML = "";
-        users.forEach((user) => {
-          const email = normalizeEmail(user.email || user.id);
-          const row = document.createElement("div");
-          row.className = "authorized-user";
-          const label = document.createElement("div");
-          label.className = "authorized-main";
-          label.innerHTML = "<span>" + email + "</span><br><small>" + (user.role === "admin" ? "관리자" : "교사") + (user.name ? " · " + user.name : "") + (user.bootstrap ? " · 최초 관리자" : "") + "</small>";
-
-          const editBox = document.createElement("div");
-          editBox.className = "authorized-edit";
-
-          const nameInput = document.createElement("input");
-          nameInput.type = "text";
-          nameInput.value = user.name || "";
-          nameInput.placeholder = "이름";
-          nameInput.disabled = user.bootstrap;
-
-          const roleSelect = document.createElement("select");
-          roleSelect.innerHTML = "<option value='teacher'>교사</option><option value='admin'>관리자</option>";
-          roleSelect.value = user.role === "admin" ? "admin" : "teacher";
-          roleSelect.disabled = user.bootstrap;
-
-          const saveBtn = document.createElement("button");
-          saveBtn.className = "btn btn-outline";
-          saveBtn.textContent = "저장";
-          saveBtn.disabled = user.bootstrap;
-          saveBtn.addEventListener("click", () => updateAuthorizedUser(email, {
-            name: nameInput.value.trim(),
-            role: roleSelect.value === "admin" ? "admin" : "teacher"
-          }));
-
-          const removeBtn = document.createElement("button");
-          removeBtn.className = "btn btn-danger";
-          removeBtn.textContent = "권한 해제";
-          removeBtn.disabled = user.bootstrap || email === normalizeEmail(currentUser && currentUser.email);
-          removeBtn.addEventListener("click", () => deactivateAuthorizedUser(email));
-
-          editBox.appendChild(nameInput);
-          editBox.appendChild(roleSelect);
-          editBox.appendChild(saveBtn);
-          editBox.appendChild(removeBtn);
-          row.appendChild(label);
-          row.appendChild(editBox);
-          authorizedUsersList.appendChild(row);
-        });
+        authorizedUsersCache = users;
+        renderAuthorizedUsers();
       } catch (err) {
         console.error("허용 계정 목록 오류:", err);
         authorizedUsersList.innerHTML = "<div class='empty-message'>목록을 불러오지 못했습니다. Firestore 규칙 배포 상태를 확인해 주세요.</div>";
       }
+    }
+    function renderAuthorizedUsers() {
+      const query = normalizeEmail(authorizedSearchInput && authorizedSearchInput.value);
+      const filtered = authorizedUsersCache.filter((user) => {
+        const email = normalizeEmail(user.email || user.id);
+        const roleText = user.role === "admin" ? "관리자 admin" : "교사 teacher";
+        const name = String(user.name || "");
+        return !query || email.includes(query) || normalizeEmail(name).includes(query) || roleText.includes(query);
+      });
+      if (authorizedUsersSummary) {
+        authorizedUsersSummary.textContent = "전체 " + authorizedUsersCache.length + "개 · 표시 " + filtered.length + "개";
+      }
+      authorizedUsersList.innerHTML = "";
+      if (!filtered.length) {
+        authorizedUsersList.innerHTML = "<div class='empty-message'>검색 결과가 없습니다.</div>";
+        return;
+      }
+      filtered.forEach((user) => {
+        const email = normalizeEmail(user.email || user.id);
+        const row = document.createElement("div");
+        row.className = "authorized-user";
+        const label = document.createElement("div");
+        label.className = "authorized-main";
+        label.innerHTML = "<span>" + email + "</span><br><small>" + (user.role === "admin" ? "관리자" : "교사") + (user.name ? " · " + user.name : "") + (user.bootstrap ? " · 최초 관리자" : "") + "</small>";
+
+        const editBox = document.createElement("div");
+        editBox.className = "authorized-edit";
+
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.value = user.name || "";
+        nameInput.placeholder = "이름";
+        nameInput.disabled = user.bootstrap;
+
+        const roleSelect = document.createElement("select");
+        roleSelect.innerHTML = "<option value='teacher'>교사</option><option value='admin'>관리자</option>";
+        roleSelect.value = user.role === "admin" ? "admin" : "teacher";
+        roleSelect.disabled = user.bootstrap;
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn btn-outline";
+        saveBtn.textContent = "저장";
+        saveBtn.disabled = user.bootstrap;
+        saveBtn.addEventListener("click", () => updateAuthorizedUser(email, {
+          name: nameInput.value.trim(),
+          role: roleSelect.value === "admin" ? "admin" : "teacher"
+        }));
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "btn btn-danger";
+        removeBtn.textContent = "권한 해제";
+        removeBtn.disabled = user.bootstrap || email === normalizeEmail(currentUser && currentUser.email);
+        removeBtn.addEventListener("click", () => deactivateAuthorizedUser(email));
+
+        editBox.appendChild(nameInput);
+        editBox.appendChild(roleSelect);
+        editBox.appendChild(saveBtn);
+        editBox.appendChild(removeBtn);
+        row.appendChild(label);
+        row.appendChild(editBox);
+        authorizedUsersList.appendChild(row);
+      });
     }
     async function addAuthorizedUser() {
       if (!isAdmin || !currentUser) return;
@@ -1173,6 +1227,9 @@
     document.getElementById("bulkAddCsvBtn").addEventListener("click", bulkAddCsvUsers);
     document.getElementById("bulkDisableCsvBtn").addEventListener("click", bulkDisableCsvUsers);
     document.getElementById("downloadCsvTemplateBtn").addEventListener("click", downloadCsvTemplate);
+    if (authorizedSearchInput) {
+      authorizedSearchInput.addEventListener("input", renderAuthorizedUsers);
+    }
 
     auth.onAuthStateChanged(async (user) => {
       currentUser = user;
@@ -1186,6 +1243,11 @@
         loadAuthorizedUsers();
         loadPlaceOptionsAdmin();
       } else {
+        authorizedUsersCache = [];
+        if (authorizedUsersSummary) {
+          authorizedUsersSummary.textContent = "관리자로 로그인하면 계정 수가 표시됩니다.";
+        }
+        if (authorizedSearchInput) authorizedSearchInput.value = "";
         storagePlacesList.innerHTML = "<div class='empty-message'>관리자로 로그인하면 보관 장소가 표시됩니다.</div>";
         foundPlacesList.innerHTML = "<div class='empty-message'>관리자로 로그인하면 습득 장소가 표시됩니다.</div>";
       }

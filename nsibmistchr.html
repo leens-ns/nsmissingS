@@ -126,52 +126,6 @@
     }
     .btn:disabled { opacity: 0.6; cursor: default; }
 
-    .auth-panel {
-      display: none;
-      border: 1px solid #dbeafe;
-      border-radius: 8px;
-      background: #f8fbff;
-      padding: 10px 12px;
-      margin: 4px 0 12px;
-    }
-    .auth-panel-title {
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: #0f172a;
-      margin-bottom: 8px;
-    }
-    .auth-panel-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 8px;
-    }
-    .auth-panel-row input {
-      flex: 1 1 240px;
-      padding: 9px 11px;
-      border-radius: 8px;
-      border: 1px solid #cbd5f5;
-      font-size: 0.9rem;
-    }
-    .authorized-list {
-      display: grid;
-      gap: 6px;
-    }
-    .authorized-user {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      font-size: 0.85rem;
-    }
-    .authorized-user small {
-      color: #64748b;
-    }
-
     .btn-register {
       width: 100%;
       margin-bottom: 12px;
@@ -1139,6 +1093,9 @@ const firebaseConfig = {
       firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
       const auth = firebase.auth();
+      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((err) => {
+        console.warn("로그인 유지 설정 오류:", err);
+      });
       const AUTHORIZED_USERS_COLLECTION = "authorized_users";
       const APP_SETTINGS_COLLECTION = "app_settings";
       const PLACE_OPTIONS_DOC = "place_options";
@@ -1700,125 +1657,6 @@ const firebaseConfig = {
         }
       }
 
-      function ensureAuthAdminPanel() {
-        const card = document.querySelector(".card");
-        const searchRow = document.querySelector(".search-row");
-        if (!card || !searchRow || document.getElementById("authAdminPanel")) return;
-
-        const panel = document.createElement("div");
-        panel.id = "authAdminPanel";
-        panel.className = "auth-panel";
-        panel.innerHTML =
-          "<div class='auth-panel-title'>허용 교직원 관리</div>" +
-          "<div class='auth-panel-row'>" +
-            "<input id='authorizedEmailInput' type='email' placeholder='추가할 nsworld.net 계정' />" +
-            "<button id='addAuthorizedUserBtn' class='btn btn-primary'>계정 추가</button>" +
-            "<button id='refreshAuthorizedUsersBtn' class='btn btn-outline'>새로고침</button>" +
-          "</div>" +
-          "<div id='authorizedUsersList' class='authorized-list'></div>";
-        card.insertBefore(panel, searchRow);
-
-        document.getElementById("addAuthorizedUserBtn").addEventListener("click", addAuthorizedUser);
-        document.getElementById("refreshAuthorizedUsersBtn").addEventListener("click", loadAuthorizedUsers);
-      }
-
-      function updateAuthAdminPanel() {
-        ensureAuthAdminPanel();
-        const panel = document.getElementById("authAdminPanel");
-        if (!panel) return;
-        panel.style.display = isAdmin ? "block" : "none";
-        if (isAdmin) loadAuthorizedUsers();
-      }
-
-      async function loadAuthorizedUsers() {
-        const list = document.getElementById("authorizedUsersList");
-        if (!list || !isAdmin) return;
-        list.innerHTML = "<div class='empty-message'>허용 목록을 불러오는 중입니다.</div>";
-        try {
-          const snapshot = await db.collection(AUTHORIZED_USERS_COLLECTION)
-            .where("active", "==", true)
-            .get();
-          const users = snapshot.docs
-            .map((doc) => ({ id: doc.id, ...(doc.data() || {}) }))
-            .sort((a, b) => normalizeEmail(a.email || a.id).localeCompare(normalizeEmail(b.email || b.id)));
-          if (!users.some((user) => normalizeEmail(user.email || user.id) === "leens@nsworld.net")) {
-            users.unshift({ id: "leens@nsworld.net", email: "leens@nsworld.net", role: "admin", bootstrap: true });
-          }
-          if (!users.length) {
-            list.innerHTML = "<div class='empty-message'>등록된 허용 계정이 없습니다.</div>";
-            return;
-          }
-          list.innerHTML = "";
-          users.forEach((user) => {
-            const email = normalizeEmail(user.email || user.id);
-            const row = document.createElement("div");
-            row.className = "authorized-user";
-            const label = document.createElement("div");
-            label.innerHTML = "<span>" + email + "</span><br><small>" + (user.role === "admin" ? "관리자" : "교사") + (user.bootstrap ? " · 최초 관리자" : "") + "</small>";
-            const removeBtn = document.createElement("button");
-            removeBtn.className = "btn btn-danger";
-            removeBtn.textContent = "해제";
-            removeBtn.disabled = user.bootstrap || email === normalizeEmail(currentUser && currentUser.email);
-            removeBtn.addEventListener("click", () => deactivateAuthorizedUser(email));
-            row.appendChild(label);
-            row.appendChild(removeBtn);
-            list.appendChild(row);
-          });
-        } catch (err) {
-          console.error("허용 계정 목록 오류:", err);
-          list.innerHTML = "<div class='empty-message'>허용 목록을 불러오지 못했습니다. Firestore 규칙을 확인해 주세요.</div>";
-        }
-      }
-
-      async function addAuthorizedUser() {
-        if (!isAdmin || !currentUser) return;
-        const input = document.getElementById("authorizedEmailInput");
-        const email = normalizeEmail(input && input.value);
-        if (!email) {
-          alert("추가할 계정을 입력해 주세요.");
-          return;
-        }
-        if (!isValidSchoolEmail(email)) {
-          alert("nsworld.net 계정만 허용 목록에 추가할 수 있습니다.");
-          return;
-        }
-        try {
-          await db.collection(AUTHORIZED_USERS_COLLECTION).doc(email).set({
-            email,
-            role: "teacher",
-            active: true,
-            addedBy: normalizeEmail(currentUser.email),
-            addedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
-          if (input) input.value = "";
-          await loadAuthorizedUsers();
-          alert("허용 계정이 추가되었습니다.");
-        } catch (err) {
-          console.error("허용 계정 추가 오류:", err);
-          alert("허용 계정 추가 중 오류가 발생했습니다.");
-        }
-      }
-
-      async function deactivateAuthorizedUser(email) {
-        if (!isAdmin || !currentUser) return;
-        const normalized = normalizeEmail(email);
-        if (!normalized || isBootstrapAdmin(normalized)) return;
-        const ok = confirm(normalized + " 계정의 접근 권한을 해제하시겠습니까?");
-        if (!ok) return;
-        try {
-          await db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).set({
-            email: normalized,
-            active: false,
-            disabledBy: normalizeEmail(currentUser.email),
-            disabledAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
-          await loadAuthorizedUsers();
-        } catch (err) {
-          console.error("허용 계정 해제 오류:", err);
-          alert("허용 계정 해제 중 오류가 발생했습니다.");
-        }
-      }
-
       auth.onAuthStateChanged(async (user) => {
         currentUser = user;
         isTeacher = false;
@@ -1851,7 +1689,6 @@ const firebaseConfig = {
           }
         }
         updateAuthUI();
-        updateAuthAdminPanel();
         updateBulkButtonLabel();
         loadPlaceOptions();
 
