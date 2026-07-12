@@ -5,7 +5,8 @@ const SHELL_FILES = [
   "./nsmissingS.html",
   "./manifest.webmanifest",
   "./manifest-student.webmanifest",
-  "./app-icon.svg"
+  "./app-icon.svg",
+  "./app-icon-student.svg"
 ];
 
 self.addEventListener("install", (event) => {

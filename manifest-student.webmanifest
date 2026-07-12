@@ -7,10 +7,10 @@
   "scope": "./",
   "display": "standalone",
   "background_color": "#f3f5fb",
-  "theme_color": "#2563eb",
+  "theme_color": "#facc15",
   "icons": [
     {
-      "src": "app-icon.svg",
+      "src": "app-icon-student.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
