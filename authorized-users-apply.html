@@ -83,7 +83,8 @@
       opacity: 0.55;
       cursor: default;
     }
-    input[type="file"] {
+    input[type="file"],
+    textarea {
       width: 100%;
       min-height: 44px;
       border: 1px solid #cbd5e1;
@@ -91,6 +92,11 @@
       background: #f8fafc;
       padding: 8px;
       font: inherit;
+    }
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+      line-height: 1.5;
     }
     .status {
       min-height: 88px;
@@ -133,6 +139,9 @@
         <input id="csvInput" type="file" accept=".csv,text/csv" />
       </div>
       <div class="row">
+        <textarea id="csvTextInput" placeholder="파일 선택이 안 될 때 CSV 내용을 그대로 붙여넣습니다."></textarea>
+      </div>
+      <div class="row">
         <button id="checkBtn" class="btn" type="button">권한 점검</button>
         <button id="applyBtn" class="btn btn-primary" type="button">CSV 계정 적용</button>
       </div>
@@ -167,6 +176,7 @@
     const logoutBtn = document.getElementById("logoutBtn");
     const authStatus = document.getElementById("authStatus");
     const csvInput = document.getElementById("csvInput");
+    const csvTextInput = document.getElementById("csvTextInput");
     const checkBtn = document.getElementById("checkBtn");
     const applyBtn = document.getElementById("applyBtn");
     let currentUser = null;
@@ -211,8 +221,9 @@
     }
     async function readRows() {
       const file = csvInput.files && csvInput.files[0];
-      if (!file) throw new Error("CSV 파일을 선택해 주세요.");
-      const text = (await file.text()).replace(/^\uFEFF/, "");
+      const pasted = csvTextInput ? csvTextInput.value.trim() : "";
+      if (!file && !pasted) throw new Error("CSV 파일을 선택하거나 CSV 내용을 붙여넣어 주세요.");
+      const text = (file ? await file.text() : pasted).replace(/^\uFEFF/, "");
       const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       let rows = lines.map(parseCsvLine);
       const first = (rows[0] || []).map((cell) => cell.toLowerCase().replace(/\s/g, ""));
