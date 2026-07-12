@@ -829,14 +829,6 @@
       color: #475569;
       line-height: 1.7;
     }
-    .update-summary {
-      margin: 0 0 10px;
-      color: #475569;
-      font-size: 0.86rem;
-      line-height: 1.6;
-      word-break: keep-all;
-      overflow-wrap: break-word;
-    }
     .update-badge {
       display: inline-flex;
       align-items: center;
@@ -862,15 +854,6 @@
     }
     .update-list li {
       margin-bottom: 3px;
-    }
-    .update-note {
-      margin: 12px 0 0;
-      padding: 9px 10px;
-      border-radius: 8px;
-      background: #f8fafc;
-      color: #64748b;
-      font-size: 0.8rem;
-      line-height: 1.55;
     }
     .update-actions {
       display: flex;
@@ -1069,9 +1052,6 @@
       </div>
       <div class="modal-body">
         <div class="update-badge">v2.1 새로 바뀐 점</div>
-        <p class="update-summary">
-          교사용 등록/관리 화면과 관리자 설정 흐름을 정리하고, 이전 주요 개선 내역을 함께 볼 수 있도록 보충했습니다.
-        </p>
         <ul class="update-list">
           <li>교사용 등록/관리 화면의 검색, 필터, 등록, 일괄 작업 영역을 기능별로 다시 정리했습니다.</li>
           <li>일괄 작업 버튼을 일괄 주인 찾기, 일괄 삭제, 일괄 재등록으로 더 명확하게 표시했습니다.</li>
@@ -1085,9 +1065,6 @@
           <li>보관 중, 주인 찾음, 폐기 완료, 휴지통 상태를 구분하고 선택 항목을 일괄 처리할 수 있게 했습니다.</li>
           <li>업데이트 안내는 일주일 동안 표시되며 오늘 하루 보지 않음 또는 다시 보지 않음을 선택할 수 있습니다.</li>
         </ul>
-        <p class="update-note">
-          자세한 사용 방법은 상단의 이용 방법 버튼에서 다시 확인할 수 있습니다.
-        </p>
         <div class="update-actions">
           <button class="btn btn-outline" id="updateNoticeTodayBtn" type="button">오늘 하루 보지 않음</button>
           <button class="btn btn-link" id="updateNoticeNeverBtn" type="button">다시 보지 않음</button>
@@ -1244,7 +1221,7 @@ const firebaseConfig = {
       const IMAGE_JPEG_QUALITY = 0.7;
       const IMGBB_EXPIRATION_SECONDS = 90 * 24 * 60 * 60;
       const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-      const UPDATE_NOTICE_ID = "teacher-update-v2.1-history-2026-07-13";
+      const UPDATE_NOTICE_ID = "teacher-update-v2.1-clean-2026-07-13";
       const UPDATE_NOTICE_PUBLISHED_AT = "2026-07-13T00:00:00+09:00";
       const UPDATE_NOTICE_SHOW_DAYS = 7;
       const UPDATE_NOTICE_NEVER_KEY = "nsmissing.updateNotice.never";
