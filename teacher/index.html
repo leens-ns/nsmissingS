@@ -83,16 +83,47 @@
       color: #64748b;
     }
 
+    .management-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px;
+    }
+    .teacher-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #e5eaf3;
+    }
+    .auth-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 40px;
+    }
+    .auth-row #authMessage {
+      min-width: 0;
+      color: #475569;
+      font-size: 0.84rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     /* 검색 영역 */
     .search-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 82px 148px;
       gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
+      align-items: stretch;
+      margin: 0;
     }
     .search-row input[type="text"] {
-      flex: 1 1 200px;
-      min-height: 36px;
+      width: 100%;
+      min-width: 0;
+      min-height: 40px;
       padding: 8px 10px;
       border-radius: 8px;
       border: 1px solid #cbd5f5;
@@ -106,7 +137,7 @@
     .btn {
       border: none;
       border-radius: 8px;
-      min-height: 36px;
+      min-height: 40px;
       padding: 7px 12px;
       font-size: 0.86rem;
       font-weight: 400;
@@ -129,7 +160,7 @@
 
     .btn-register {
       width: 100%;
-      margin-bottom: 12px;
+      min-height: 42px;
       font-weight: 600;
       justify-content: center;
       padding: 8px 12px;
@@ -138,7 +169,8 @@
 
     .btn-chip {
       border-radius: 8px;
-      padding: 4px 10px;
+      min-height: 32px;
+      padding: 5px 10px;
       font-size: 0.78rem;
       border: 1px solid #d1d5db;
       background: #ffffff;
@@ -197,7 +229,30 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      margin-bottom: 12px;
+      margin: 0;
+    }
+    .filter-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, 0.45fr);
+      gap: 12px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+    .filter-group {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+    .filter-label {
+      color: #64748b;
+      font-size: 0.74rem;
+      font-weight: 600;
+    }
+    .status-row {
+      justify-content: flex-end;
     }
 
     .section-header-row {
@@ -205,7 +260,9 @@
       flex-direction: column;
       align-items: flex-start;
       gap: 8px;
-      margin-top: 16px;
+      margin-top: 4px;
+      padding-top: 12px;
+      border-top: 1px solid #e5eaf3;
     }
 
     /* 일괄 처리 버튼 영역 */
@@ -214,7 +271,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px;
       margin: 0;
-      width: min(100%, 420px);
+      width: min(100%, 360px);
     }
     .bulk-actions .btn {
       font-weight: 500;
@@ -670,6 +727,12 @@
       }
     }
     @media (min-width: 1024px) {
+      .teacher-toolbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      .auth-row {
+        grid-column: 1 / -1;
+      }
       #itemsContainer {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
@@ -717,6 +780,38 @@
       cursor: default;
     }
     @media (max-width: 640px) {
+      .management-card {
+        gap: 12px;
+        padding: 14px;
+      }
+      .auth-row {
+        align-items: flex-start;
+      }
+      .auth-row #authMessage {
+        white-space: normal;
+        line-height: 1.35;
+      }
+      .search-row {
+        grid-template-columns: minmax(0, 1fr) 74px;
+      }
+      #clearSearchBtn {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+      .filter-panel {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+      }
+      .status-row {
+        justify-content: flex-start;
+      }
+      .btn-chip {
+        min-height: 34px;
+      }
+      .bulk-actions {
+        width: 100%;
+      }
       .page-title {
         font-size: var(--page-title-size-mobile);
       }
@@ -799,15 +894,17 @@
       </div>
     </header>
 
-    <div class="card">
-      <div class="search-row">
-        <input
-          type="text"
-          id="searchInput"
-          placeholder="분실물 검색 (종류, 장소, 설명 등)"
-        />
-        <button class="btn btn-primary" id="searchBtn">검색</button>
-        <button class="btn btn-outline" id="clearSearchBtn" type="button">검색/필터 지우기</button>
+    <div class="card management-card">
+      <div class="teacher-toolbar">
+        <div class="search-row">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="분실물 검색 (종류, 장소, 설명 등)"
+          />
+          <button class="btn btn-primary" id="searchBtn">검색</button>
+          <button class="btn btn-outline" id="clearSearchBtn" type="button">검색/필터 지우기</button>
+        </div>
       </div>
 
       <!-- 큰 분실물 등록 버튼 -->
@@ -816,17 +913,27 @@
       </button>
 
       <!-- 카테고리별 필터 버튼 -->
-      <div class="cat-row" id="categoryButtons">
-        <button class="btn-chip btn-chip-active" data-category="전체">전체</button>
-        <button class="btn-chip" data-category="의류/가방">의류/가방</button>
-        <button class="btn-chip" data-category="학용품">학용품</button>
-        <button class="btn-chip" data-category="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</button>
-        <button class="btn-chip" data-category="물병/텀블러">물병/텀블러</button>
-        <button class="btn-chip" data-category="열쇠/악세사리">열쇠/악세사리</button>
-        <button class="btn-chip" data-category="기타">기타</button>
-        <button class="btn-chip btn-chip-found" data-category="주인 찾음">주인 찾음</button>
-        <button class="btn-chip btn-chip-discarded" data-category="폐기 완료">폐기 완료</button>
-        <button class="btn-chip btn-chip-deleted" data-category="휴지통">휴지통</button>
+      <div class="filter-panel" id="categoryButtons">
+        <div class="filter-group">
+          <div class="filter-label">분류</div>
+          <div class="cat-row">
+            <button class="btn-chip btn-chip-active" data-category="전체">전체</button>
+            <button class="btn-chip" data-category="의류/가방">의류/가방</button>
+            <button class="btn-chip" data-category="학용품">학용품</button>
+            <button class="btn-chip" data-category="전자기기(휴대폰/태블릿PC 등)">전자기기(휴대폰/태블릿PC 등)</button>
+            <button class="btn-chip" data-category="물병/텀블러">물병/텀블러</button>
+            <button class="btn-chip" data-category="열쇠/악세사리">열쇠/악세사리</button>
+            <button class="btn-chip" data-category="기타">기타</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">상태</div>
+          <div class="cat-row status-row">
+            <button class="btn-chip btn-chip-found" data-category="주인 찾음">주인 찾음</button>
+            <button class="btn-chip btn-chip-discarded" data-category="폐기 완료">폐기 완료</button>
+            <button class="btn-chip btn-chip-deleted" data-category="휴지통">휴지통</button>
+          </div>
+        </div>
       </div>
 
       <div id="teacherFormWrapper" class="card" style="margin-top: 8px; padding: 12px 14px;">
@@ -915,7 +1022,7 @@
       </div>
 
       <div class="section-header-row">
-        <div class="section-title" style="margin-top:16px;">분실물 현황</div>
+        <div class="section-title">분실물 현황</div>
         <div id="bulkActions" class="bulk-actions" style="display:none;">
           <button id="bulkFoundBtn" class="btn btn-bulk-found" disabled>일괄 주인 찾기</button>
           <button id="bulkDeleteBtn" class="btn btn-bulk-delete" disabled>일괄 삭제</button>
@@ -1397,12 +1504,12 @@ const firebaseConfig = {
 
       // ====== 상단 로그인/상태 영역 추가를 위해 동적으로 요소 삽입 ======
       (function insertAuthRow() {
-        const card = document.querySelector(".card");
+        const card = document.querySelector(".management-card");
         const searchRow = document.querySelector(".search-row");
         if (!card || !searchRow) return;
+        const toolbar = document.querySelector(".teacher-toolbar") || card;
         const authRow = document.createElement("div");
-        authRow.className = "search-row";
-        authRow.style.marginBottom = "4px";
+        authRow.className = "auth-row";
 
         const authStatus = document.createElement("div");
         authStatus.id = "authMessage";
@@ -1426,7 +1533,7 @@ const firebaseConfig = {
         authRow.appendChild(loginBtn);
         authRow.appendChild(logoutBtn);
 
-        card.insertBefore(authRow, searchRow);
+        toolbar.insertBefore(authRow, searchRow);
       })();
 
       const authMessage = document.getElementById("authMessage");
@@ -1644,7 +1751,7 @@ const firebaseConfig = {
           if (teacherFormWrapper) {
             // 교사는 필요 시 등록 폼을 열 수 있도록 유지 (기본은 접힘 상태)
           }
-          if (bulkActions) bulkActions.style.display = "flex";
+          if (bulkActions) bulkActions.style.display = "grid";
           if (itemsContainer) itemsContainer.style.display = "";
         } else if (currentUser && !isTeacher) {
           authMessage.innerHTML =
