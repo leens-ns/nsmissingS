@@ -739,6 +739,7 @@ const firebaseConfig = {
     const UPDATE_NOTICE_NEVER_KEY = "nsmissing.studentUpdateNotice.never";
     const UPDATE_NOTICE_HIDE_UNTIL_KEY = "nsmissing.studentUpdateNotice.hideUntil";
     let deferredInstallPrompt = null;
+    let installPromptChecked = false;
 
     function isStandaloneApp() {
       return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -755,8 +756,11 @@ const firebaseConfig = {
       } else if (deferredInstallPrompt) {
         appInstallBtn.textContent = "앱 설치";
         appInstallBtn.classList.add("is-ready");
+      } else if (!installPromptChecked) {
+        appInstallBtn.textContent = "설치 확인 중";
+        appInstallBtn.disabled = true;
       } else {
-        appInstallBtn.textContent = "앱 설치";
+        appInstallBtn.textContent = "설치 방법";
       }
     }
 
@@ -770,7 +774,7 @@ const firebaseConfig = {
         alert("iPhone/iPad에서는 Safari 공유 버튼을 누른 뒤 '홈 화면에 추가'를 선택해 주세요.");
         return;
       }
-      alert("이 브라우저에서 자동 설치창을 아직 제공하지 않았습니다.\n주소창 오른쪽의 설치 아이콘이나 브라우저 메뉴의 '앱 설치'를 확인해 주세요.");
+      alert("Chrome이 자동 설치창을 아직 제공하지 않았습니다.\n이미 앱이 설치되어 있거나, 이전 캐시가 남아 있거나, 주소창의 설치 아이콘으로만 제공되는 상태일 수 있습니다.\n주소창 오른쪽 설치 아이콘 또는 Chrome 메뉴의 '앱 설치'를 확인해 주세요.");
     }
 
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
@@ -781,14 +785,21 @@ const firebaseConfig = {
 
     window.addEventListener("beforeinstallprompt", (event) => {
       event.preventDefault();
+      installPromptChecked = true;
       deferredInstallPrompt = event;
       updateInstallButtonState();
     });
 
     window.addEventListener("appinstalled", () => {
+      installPromptChecked = true;
       deferredInstallPrompt = null;
       updateInstallButtonState();
     });
+
+    window.setTimeout(() => {
+      installPromptChecked = true;
+      updateInstallButtonState();
+    }, 2500);
 
     function getLocalStorageItem(key) {
       try {
