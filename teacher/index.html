@@ -232,10 +232,10 @@
       margin: 0;
     }
     .filter-panel {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(240px, 0.45fr);
+      display: flex;
+      flex-wrap: wrap;
       gap: 12px;
-      align-items: start;
+      align-items: flex-end;
       padding: 12px;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
@@ -246,13 +246,19 @@
       gap: 7px;
       min-width: 0;
     }
+    .filter-group:first-child {
+      flex: 0 1 auto;
+    }
+    .filter-group:last-child {
+      flex: 0 0 auto;
+    }
     .filter-label {
       color: #64748b;
       font-size: 0.74rem;
       font-weight: 600;
     }
     .status-row {
-      justify-content: flex-end;
+      justify-content: flex-start;
     }
 
     .section-header-row {
@@ -799,12 +805,12 @@
         width: 100%;
       }
       .filter-panel {
-        grid-template-columns: 1fr;
         gap: 10px;
         padding: 10px;
       }
-      .status-row {
-        justify-content: flex-start;
+      .filter-group:first-child,
+      .filter-group:last-child {
+        flex: 1 1 100%;
       }
       .btn-chip {
         min-height: 34px;
