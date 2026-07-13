@@ -233,10 +233,8 @@
       margin: 0;
     }
     .filter-panel {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: flex-end;
+      display: grid;
+      gap: 10px;
       padding: 12px;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
@@ -244,18 +242,14 @@
     }
     .filter-group {
       display: grid;
-      gap: 7px;
+      grid-template-columns: 44px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
       min-width: 0;
     }
-    .filter-group:first-child {
-      flex: 0 1 auto;
-    }
     .filter-group:last-child {
-      flex: 0 0 auto;
-      padding: 8px 10px 8px 12px;
-      border-left: 1px solid #dbe3ef;
-      border-radius: 8px;
-      background: #ffffff;
+      padding-top: 10px;
+      border-top: 1px solid #e2e8f0;
     }
     .filter-label {
       color: #64748b;
@@ -810,19 +804,10 @@
         width: 100%;
       }
       .filter-panel {
-        gap: 10px;
         padding: 10px;
       }
-      .filter-group:first-child,
-      .filter-group:last-child {
-        flex: 1 1 100%;
-      }
-      .filter-group:last-child {
-        padding: 10px 0 0;
-        border-left: 0;
-        border-top: 1px solid #dbe3ef;
-        border-radius: 0;
-        background: transparent;
+      .filter-group {
+        grid-template-columns: 38px minmax(0, 1fr);
       }
       .btn-chip {
         min-height: 34px;
