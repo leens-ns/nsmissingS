@@ -251,6 +251,10 @@
     }
     .filter-group:last-child {
       flex: 0 0 auto;
+      padding: 8px 10px 8px 12px;
+      border-left: 1px solid #dbe3ef;
+      border-radius: 8px;
+      background: #ffffff;
     }
     .filter-label {
       color: #64748b;
@@ -811,6 +815,13 @@
       .filter-group:first-child,
       .filter-group:last-child {
         flex: 1 1 100%;
+      }
+      .filter-group:last-child {
+        padding: 10px 0 0;
+        border-left: 0;
+        border-top: 1px solid #dbe3ef;
+        border-radius: 0;
+        background: transparent;
       }
       .btn-chip {
         min-height: 34px;
