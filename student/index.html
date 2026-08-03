@@ -899,7 +899,7 @@ const firebaseConfig = {
         imgWrap.className = "item-image-wrapper";
         const img = document.createElement("img");
         img.loading = "lazy";
-        img.src = item.imageUrl || "";
+        img.src = item.imageDataUrl || item.imageUrl || "";
         img.alt = item.title || "분실물 이미지";
         imgWrap.appendChild(img);
 
@@ -968,7 +968,7 @@ const firebaseConfig = {
     function openModal(item) {
       if (!item) return;
       modalTitle.textContent = item.title || "분실물";
-      modalImage.src = item.imageUrl || "";
+      modalImage.src = item.imageDataUrl || item.imageUrl || "";
       modalCategory.textContent = item.category || "-";
       modalStorage.textContent = item.storageLocation || "-";
       modalFoundPlace.textContent = item.foundPlace || "-";
@@ -1089,6 +1089,7 @@ const firebaseConfig = {
               foundTime: normalizeTs(data.foundTime),
               finderName: data.finderName || "",
               createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
+              imageDataUrl: data.imageDataUrl || "",
               imageUrl: data.imageUrl || "",
               status: "stored"
             });

@@ -1,16 +1,11 @@
-const CACHE_NAME = "nsmissing-app-v5";
+const CACHE_NAME = "nsmissing-app-v6";
 const SHELL_FILES = [
-  "./",
-  "./nsibmistchr.html",
-  "./nsmissingS.html",
   "./student/",
   "./student/index.html",
   "./student/manifest.webmanifest",
   "./teacher/",
   "./teacher/index.html",
   "./teacher/manifest.webmanifest",
-  "./manifest.webmanifest",
-  "./manifest-student.webmanifest",
   "./app-icon.svg",
   "./app-icon-student.svg",
   "./app-icon-teacher-192.png",
@@ -18,6 +13,12 @@ const SHELL_FILES = [
   "./app-icon-student-192.png",
   "./app-icon-student-512.png"
 ];
+const RETIRED_PATHS = new Set([
+  "/nsmissingS/nsmissingS.html",
+  "/nsmissingS/nsibmistchr.html",
+  "/nsmissingS.html",
+  "/nsibmistchr.html"
+]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -37,6 +38,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin === self.location.origin && RETIRED_PATHS.has(requestUrl.pathname)) {
+    event.respondWith(new Response("", { status: 404 }));
+    return;
+  }
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );

@@ -1216,12 +1216,10 @@ const firebaseConfig = {
       const DEFAULT_STORAGE_LOCATIONS = ["교무실", "행정실", "보건실", "상담실", "가온누리"];
       const DEFAULT_FOUND_PLACES = ["운동장", "강당", "급식실", "복도", "교실", "도서관"];
 
-      // ===================== imgbb 설정 =====================
-      const IMGBB_API_KEY = "b6eac487cb547bc827cef84b2fbbd7c7";
       const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
       const IMAGE_MAX_SIDE = 600;
       const IMAGE_JPEG_QUALITY = 0.7;
-      const IMGBB_EXPIRATION_SECONDS = 90 * 24 * 60 * 60;
+      const MAX_IMAGE_DATA_URL_LENGTH = 320000;
       const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
       const UPDATE_NOTICE_ID = "teacher-update-v2.1-clean-2026-07-13";
       const UPDATE_NOTICE_PUBLISHED_AT = "2026-07-13T00:00:00+09:00";
@@ -1257,10 +1255,6 @@ const firebaseConfig = {
                 resolve(file);
                 return;
               }
-              if (w <= maxSize && h <= maxSize) {
-                resolve(file);
-                return;
-              }
               let newW, newH;
               if (w > h) {
                 newW = maxSize;
@@ -1293,25 +1287,23 @@ const firebaseConfig = {
         });
       }
 
-      async function uploadToImgBB(file) {
+      async function prepareImageDataUrl(file) {
         if (!file) return "";
         validateImageFile(file);
         const resized = await resizeImage(file, IMAGE_MAX_SIDE);
-        const formData = new FormData();
-        formData.append("image", resized);
-        const url = "https://api.imgbb.com/1/upload?expiration=" + IMGBB_EXPIRATION_SECONDS + "&key=" + encodeURIComponent(IMGBB_API_KEY);
-        const res = await fetch(url, { method: "POST", body: formData });
-        if (!res.ok) {
-          throw new Error("이미지 업로드에 실패했습니다.(네트워크 오류)");
-        }
-        const data = await res.json();
-        if (!data || !data.success) {
-          throw new Error("이미지 업로드에 실패했습니다.");
-        }
-        return {
-          url: data.data.url,
-          expiresAt: new Date(Date.now() + IMGBB_EXPIRATION_SECONDS * 1000).toISOString()
-        };
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = String(reader.result || "");
+            if (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH) {
+              reject(new Error("사진 용량이 너무 큽니다. 더 작은 사진을 선택해 주세요."));
+              return;
+            }
+            resolve(dataUrl);
+          };
+          reader.onerror = () => reject(new Error("사진을 읽지 못했습니다."));
+          reader.readAsDataURL(resized);
+        });
       }
 
       // ===================== 공통 유틸 =====================
@@ -1995,7 +1987,7 @@ const firebaseConfig = {
 
           const img = document.createElement("img");
           img.loading = "lazy";
-          img.src = item.imageUrl || "";
+          img.src = item.imageDataUrl || item.imageUrl || "";
           img.alt = item.title || "분실물 이미지";
           imgWrap.appendChild(img);
 
@@ -2074,7 +2066,7 @@ const firebaseConfig = {
         modalTitle.textContent = item.title || "분실물";
         modalTitleInput.value = item.title || "";
 
-        modalImage.src = item.imageUrl || "";
+        modalImage.src = item.imageDataUrl || item.imageUrl || "";
         modalCategory.textContent = item.category || "-";
         modalCategoryInput.value = item.category || "기타";
 
@@ -2411,7 +2403,7 @@ const firebaseConfig = {
 
           try {
             const file = imageInput.files[0];
-            const uploadedImage = await uploadToImgBB(file);
+            const imageDataUrl = await prepareImageDataUrl(file);
 
             let foundTimeTs = null;
             if (foundTimeVal) {
@@ -2429,8 +2421,7 @@ const firebaseConfig = {
               foundTime: foundTimeTs,
               finderName,
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-              imageUrl: uploadedImage.url,
-              imageExpiresAt: uploadedImage.expiresAt,
+              imageDataUrl,
               status: "stored",
               ownerInfo: ""
             });
@@ -2846,6 +2837,7 @@ const firebaseConfig = {
                 foundTime: normalizeTs(data.foundTime),
                 finderName: data.finderName || "",
                 createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
+                imageDataUrl: data.imageDataUrl || "",
                 imageUrl: data.imageUrl || "",
                 imageExpiresAt: normalizeTs(data.imageExpiresAt),
                 status: status,
