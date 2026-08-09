@@ -82,36 +82,33 @@
       padding-top: 22px;
       border-top: 1px solid #e2e8f0;
     }
-    .contact-section h2 {
-      margin-bottom: 12px;
-    }
-    .contact-list {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px 14px;
+    .contact-section h2 { margin-bottom: 12px; }
+    .contact-card {
       margin: 0;
-    }
-    .contact-row {
-      display: grid;
-      grid-template-columns: max-content minmax(0, 1fr);
-      gap: 14px;
-      align-items: start;
-      min-width: 0;
-      padding: 12px 14px;
+      padding: 16px 18px;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
+      color: #172033;
+      font-style: normal;
     }
-    .contact-row dt {
+    .contact-line {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      min-width: 0;
+      margin: 0;
+    }
+    .contact-line + .contact-line { margin-top: 8px; }
+    .contact-label {
+      flex: 0 0 auto;
       color: #64748b;
       font-size: 0.84rem;
       font-weight: 600;
       white-space: nowrap;
     }
-    .contact-row dd {
+    .contact-value {
       min-width: 0;
-      margin: 0;
-      color: #172033;
       overflow-wrap: anywhere;
     }
     .site-footer {
@@ -136,14 +133,11 @@
       }
       h1 { font-size: 1.35rem; }
       h2 { font-size: 1.04rem; }
-      .contact-list { grid-template-columns: 1fr; }
     }
     @media (max-width: 480px) {
       main { padding: 20px 18px; }
-      .contact-row {
-        grid-template-columns: 1fr;
-        gap: 2px;
-      }
+      .contact-line { display: block; }
+      .contact-value { display: block; margin-top: 2px; }
     }
   </style>
 </head>
@@ -183,29 +177,29 @@
     </section>
 
     <section class="contact-section" aria-labelledby="contact-title">
-      <h2 id="contact-title">개인정보 보호 문의</h2>
-      <dl class="contact-list">
-        <div class="contact-row">
-          <dt>개인정보처리자</dt>
-          <dd>남성초등학교</dd>
-        </div>
-        <div class="contact-row">
-          <dt>주소</dt>
-          <dd>부산광역시 중구 샘길14, 남성초등학교</dd>
-        </div>
-        <div class="contact-row">
-          <dt>개인정보 보호책임자</dt>
-          <dd>이노섭 교사</dd>
-        </div>
-        <div class="contact-row">
-          <dt>전화</dt>
-          <dd><a href="tel:051-469-7963">051-469-7963</a></dd>
-        </div>
-        <div class="contact-row">
-          <dt>권리 요청 담당 이메일</dt>
-          <dd><a href="mailto:leens@nsworld.net">leens@nsworld.net</a></dd>
-        </div>
-      </dl>
+      <h2 id="contact-title">시스템 개인정보 보호 문의</h2>
+      <address class="contact-card">
+        <p class="contact-line">
+          <span class="contact-label">개인정보처리자</span>
+          <span class="contact-value">남성초등학교</span>
+        </p>
+        <p class="contact-line">
+          <span class="contact-label">주소</span>
+          <span class="contact-value">부산광역시 중구 샘길14, 남성초등학교</span>
+        </p>
+        <p class="contact-line">
+          <span class="contact-label">시스템 개인정보 보호책임자</span>
+          <span class="contact-value">이노섭 교육과정부장</span>
+        </p>
+        <p class="contact-line">
+          <span class="contact-label">전화</span>
+          <span class="contact-value"><a href="tel:051-469-7963">051-469-7963</a></span>
+        </p>
+        <p class="contact-line">
+          <span class="contact-label">권리 요청 담당 이메일</span>
+          <span class="contact-value"><a href="mailto:leens@nsworld.net">leens@nsworld.net</a></span>
+        </p>
+      </address>
     </section>
     <footer class="site-footer" aria-label="저작권 정보">
       <p class="footer-copyright">© 2026 남성초등학교. All rights reserved.</p>
