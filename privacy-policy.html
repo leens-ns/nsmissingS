@@ -32,17 +32,9 @@
     main {
       width: min(900px, calc(100% - 32px));
       margin: 32px auto;
-      padding: 32px 36px;
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      padding: 0;
     }
-    .eyebrow {
-      margin: 0 0 4px;
-      color: #64748b;
-      font-size: 0.92rem;
-    }
+    .page-header { padding: 0 0 20px; }
     h1 {
       margin: 0;
       font-size: 1.6rem;
@@ -50,15 +42,24 @@
       letter-spacing: 0;
     }
     .effective-date {
-      margin: 6px 0 22px;
+      margin: 6px 0 0;
       color: #64748b;
       font-size: 0.9rem;
     }
-    .policy-item {
-      padding: 18px 0;
-      border-top: 1px solid #e2e8f0;
+    .policy-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-items: start;
     }
-    .policy-item:first-of-type { border-top: 0; }
+    .policy-item {
+      min-width: 0;
+      padding: 20px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
     h2 {
       margin: 0 0 8px;
       font-size: 1.12rem;
@@ -78,9 +79,7 @@
       font-weight: 600;
     }
     .contact-section {
-      margin-top: 24px;
-      padding-top: 22px;
-      border-top: 1px solid #e2e8f0;
+      margin-top: 18px;
     }
     .contact-section h2 { margin-bottom: 12px; }
     .contact-card {
@@ -111,6 +110,30 @@
       min-width: 0;
       overflow-wrap: anywhere;
     }
+    .contact-note {
+      margin: 10px 0 0;
+      color: #64748b;
+      font-size: 0.86rem;
+    }
+    .policy-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 8px 16px;
+      color: #334155;
+      text-decoration: none;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.92rem;
+    }
+    .back-link:hover { background: #f8fafc; }
     .site-footer {
       margin-top: 18px;
       padding-top: 14px;
@@ -129,13 +152,13 @@
       main {
         width: calc(100% - 20px);
         margin: 10px auto;
-        padding: 24px;
       }
       h1 { font-size: 1.35rem; }
       h2 { font-size: 1.04rem; }
+      .policy-grid { grid-template-columns: 1fr; }
+      .policy-item { padding: 18px; }
     }
     @media (max-width: 480px) {
-      main { padding: 20px 18px; }
       .contact-line { display: block; }
       .contact-value { display: block; margin-top: 2px; }
     }
@@ -143,37 +166,40 @@
 </head>
 <body>
   <main>
-    <p class="eyebrow">남성초등학교 분실물 센터</p>
-    <h1>개인정보 처리방침</h1>
-    <p class="effective-date">시행일: 2026년 8월 9일</p>
+    <header class="page-header">
+      <h1>개인정보 처리방침</h1>
+      <p class="effective-date">남성초등학교 분실물 센터 · 시행일: 2026년 8월 9일</p>
+    </header>
 
-    <section class="policy-item" aria-labelledby="purpose-title">
-      <h2 id="purpose-title">개인정보 수집 목적</h2>
-      <p>교직원·관리자 계정을 확인하고, 개인정보 처리방침 동의 이력을 확인해 반복 동의를 줄이며, 분실물을 등록·관리하고 학생·학부모가 분실물을 조회할 수 있도록 하기 위해 개인정보를 처리합니다. 학생·학부모용 조회 화면은 로그인이나 개인정보 입력 없이 이용할 수 있습니다. 등록한 분실물 사진·설명·분류·장소·습득 시간은 공개 조회 화면에 표시되며, 습득자 구분·수령 학생 정보·작업자 이메일은 공개하지 않습니다.</p>
-    </section>
+    <section class="policy-grid" aria-label="개인정보 처리방침 핵심 내용">
+      <article class="policy-item" aria-labelledby="purpose-title">
+        <h2 id="purpose-title">개인정보 수집 목적</h2>
+        <p>교직원·관리자 계정을 확인하고, 개인정보 처리방침 동의 이력을 확인해 반복 동의를 줄이며, 분실물을 등록·관리하고 학생·학부모가 분실물을 조회할 수 있도록 하기 위해 개인정보를 처리합니다. 학생·학부모용 조회 화면은 로그인이나 개인정보 입력 없이 이용할 수 있습니다. 등록한 분실물 사진·설명·분류·장소·습득 시간은 공개 조회 화면에 표시되며, 습득자 구분·수령 학생 정보·작업자 이메일은 공개하지 않습니다.</p>
+      </article>
 
-    <section class="policy-item" aria-labelledby="items-title">
-      <h2 id="items-title">수집하는 개인정보: 필수/선택별 항목</h2>
-      <ul>
-        <li><span class="label">필수</span>교직원·관리자 Google 계정 이메일, 허용 계정의 권한, 개인정보 처리방침 동의 여부·동의한 방침 버전·동의 시각, 분실물 등록에 필요한 사진·물건 이름/설명·분류·보관 장소·습득 장소</li>
-        <li><span class="label">선택</span>허용 계정의 표시 이름, 습득 시간, 습득자 구분(예: 학급 또는 교직원 구분)</li>
-        <li><span class="label">처리 시</span>주인 찾기 완료 시 입력하는 수령 학생의 학년·반·번호(이름은 입력하지 않음), 허용 계정·장소 설정 및 휴지통 이동·복구 작업자의 이메일과 처리 시각</li>
-        <li><span class="label">자동 처리</span>Firebase·Google 로그인과 jsDelivr 글꼴 제공 과정에서 IP 주소, 사용자 에이전트, 접속 시각 등이 외부 서비스에 의해 처리될 수 있습니다. 교직원·관리자의 로그인 상태는 같은 브라우저에 유지되므로 공용 기기에서는 사용 후 로그아웃해야 합니다. 업데이트 안내의 숨김 선택은 브라우저 로컬 저장소에만 저장되며 브라우저 사이트 데이터를 지우면 함께 삭제됩니다. 앱은 전화번호, GPS 위치, 통계·결제·AI 정보를 직접 수집하도록 작성되어 있지 않습니다.</li>
-      </ul>
-    </section>
+      <article class="policy-item" aria-labelledby="items-title">
+        <h2 id="items-title">수집하는 개인정보: 필수/선택별 항목</h2>
+        <ul>
+          <li><span class="label">필수</span>교직원·관리자 Google 계정 이메일, 허용 계정의 권한, 개인정보 처리방침 동의 여부·동의한 방침 버전·동의 시각, 분실물 등록에 필요한 사진·물건 이름/설명·분류·보관 장소·습득 장소</li>
+          <li><span class="label">선택</span>허용 계정의 표시 이름, 습득 시간, 습득자 구분(예: 학급 또는 교직원 구분)</li>
+          <li><span class="label">처리 시</span>주인 찾기 완료 시 입력하는 수령 학생의 학년·반·번호(이름은 입력하지 않음), 허용 계정·장소 설정 및 휴지통 이동·복구 작업자의 이메일과 처리 시각</li>
+          <li><span class="label">자동 처리</span>Firebase·Google 로그인과 jsDelivr 글꼴 제공 과정에서 외부 서비스가 서비스 운영·보안을 위한 기술 정보를 자체 처리할 수 있습니다. 앱은 이를 분실물 문서로 직접 저장하지 않습니다. 교직원·관리자의 로그인 상태는 같은 브라우저에 유지되며, 업데이트 안내의 숨김 선택은 브라우저 로컬 저장소에만 저장됩니다. 앱은 전화번호, GPS 위치, 통계·결제·AI 정보를 직접 수집하도록 작성되어 있지 않습니다.</li>
+        </ul>
+      </article>
 
-    <section class="policy-item" aria-labelledby="retention-title">
-      <h2 id="retention-title">개인정보 보유기간</h2>
-      <ul>
-        <li><span class="label">교직원</span>허용 계정, 교직원 식별정보와 개인정보 처리방침 동의 기록은 각 교직원의 <strong>남성초등학교 근무 시작일부터 근무 종료일까지</strong> 보유합니다. 개별 근무기간은 시스템에 입력하지 않으며, 관리자가 근무 종료 사실을 확인하는 즉시 허용 계정을 삭제합니다. 삭제 즉시 앱 접근이 차단되고 개인정보 처리방침 동의 기록도 함께 삭제됩니다. Firebase Authentication 로그인 기록은 관리자 콘솔에서 별도로 삭제합니다.</li>
-        <li><span class="label">분실물</span>보관 중 물품은 등록 후 30일이 지나면 폐기 처리할 수 있습니다. 주인 찾음·폐기 완료 항목은 처리 후 7일이 지나고 교직원용 화면에서 해당 상태 목록을 불러오면 휴지통으로 이동하며, 휴지통에서 영구 삭제할 때 관련 정보가 삭제됩니다.</li>
-        <li><span class="label">Firebase</span>Firebase Authentication은 인증 IP를 몇 주간 보유할 수 있으며, 그 밖의 인증 정보는 학교가 해당 사용자를 삭제할 때까지 보유될 수 있습니다. 삭제 후 실시간·백업 시스템에서 제거되는 데 최대 180일이 걸릴 수 있습니다.</li>
-      </ul>
-    </section>
+      <article class="policy-item" aria-labelledby="retention-title">
+        <h2 id="retention-title">개인정보 보유기간</h2>
+        <ul>
+          <li><span class="label">교직원</span>허용 계정, 교직원 식별정보와 개인정보 처리방침 동의 기록은 각 교직원의 <strong>남성초등학교 근무 시작일부터 근무 종료일까지</strong> 보유합니다. 개별 근무기간은 시스템에 입력하지 않으며, 관리자가 근무 종료 사실을 확인하는 즉시 허용 계정을 삭제합니다. 삭제 즉시 앱 접근이 차단되고 개인정보 처리방침 동의 기록도 함께 삭제됩니다. Firebase Authentication 로그인 기록은 관리자 콘솔에서 별도로 삭제합니다.</li>
+          <li><span class="label">분실물</span>보관 중 물품은 등록 후 30일이 지나면 폐기 처리할 수 있습니다. 주인 찾음·폐기 완료 항목은 처리 후 7일이 지나고 교직원용 화면에서 해당 상태 목록을 불러오면 휴지통으로 이동하며, 휴지통에서 영구 삭제할 때 관련 정보가 삭제됩니다.</li>
+          <li><span class="label">Firebase</span>Firebase Authentication은 인증 IP를 몇 주간 보유할 수 있으며, 그 밖의 인증 정보는 학교가 해당 사용자를 삭제할 때까지 보유될 수 있습니다. 삭제 후 실시간·백업 시스템에서 제거되는 데 최대 180일이 걸릴 수 있습니다.</li>
+        </ul>
+      </article>
 
-    <section class="policy-item" aria-labelledby="refusal-title">
-      <h2 id="refusal-title">미동의 시 안내</h2>
-      <p>교직원·관리자가 개인정보 수집·이용에 동의하지 않거나 Google 로그인을 하지 않으면 분실물 등록·관리 및 관리자 기능을 이용할 수 없습니다. 분실물 등록에 필요한 필수 항목을 입력하지 않으면 등록할 수 없습니다. 선택 항목은 입력하지 않아도 기본 등록이 가능합니다. 학생·학부모용 조회는 로그인과 개인정보 입력 없이 이용할 수 있습니다.</p>
+      <article class="policy-item" aria-labelledby="refusal-title">
+        <h2 id="refusal-title">미동의 시 안내</h2>
+        <p>교직원·관리자가 개인정보 수집·이용에 동의하지 않거나 Google 로그인을 하지 않으면 분실물 등록·관리 및 관리자 기능을 이용할 수 없습니다. 분실물 등록에 필요한 필수 항목을 입력하지 않으면 등록할 수 없습니다. 선택 항목은 입력하지 않아도 기본 등록이 가능합니다. 학생·학부모용 조회는 로그인과 개인정보 입력 없이 이용할 수 있습니다.</p>
+      </article>
     </section>
 
     <section class="contact-section" aria-labelledby="contact-title">
@@ -199,8 +225,12 @@
           <span class="contact-label">권리 요청 담당 이메일</span>
           <span class="contact-value"><a href="mailto:leens@nsworld.net">leens@nsworld.net</a></span>
         </p>
+        <p class="contact-note">개인정보 열람·정정·삭제·처리정지 요청은 아래 전화 또는 이메일로 접수합니다.</p>
       </address>
     </section>
+    <div class="policy-actions">
+      <a class="back-link" href="student/">분실물 조회 화면으로 돌아가기</a>
+    </div>
     <footer class="site-footer" aria-label="저작권 정보">
       <p class="footer-copyright">© 2026 남성초등학교. All rights reserved.</p>
     </footer>
