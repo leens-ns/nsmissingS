@@ -30,9 +30,9 @@
       line-height: 1.65;
     }
     main {
-      width: min(760px, calc(100% - 28px));
-      margin: 28px auto;
-      padding: 28px;
+      width: min(900px, calc(100% - 32px));
+      margin: 32px auto;
+      padding: 32px 36px;
       background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
@@ -77,12 +77,42 @@
       color: #1d4ed8;
       font-weight: 600;
     }
-    .contact {
-      margin-top: 18px;
-      padding-top: 14px;
+    .contact-section {
+      margin-top: 24px;
+      padding-top: 22px;
       border-top: 1px solid #e2e8f0;
+    }
+    .contact-section h2 {
+      margin-bottom: 12px;
+    }
+    .contact-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+      margin: 0;
+    }
+    .contact-row {
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      min-width: 0;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+    .contact-row dt {
       color: #64748b;
-      font-size: 0.86rem;
+      font-size: 0.84rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .contact-row dd {
+      min-width: 0;
+      margin: 0;
+      color: #172033;
+      overflow-wrap: anywhere;
     }
     .site-footer {
       margin-top: 18px;
@@ -98,14 +128,22 @@
       overflow-wrap: break-word;
     }
     a { color: #1d4ed8; }
-    @media (max-width: 640px) {
+    @media (max-width: 720px) {
       main {
         width: calc(100% - 20px);
         margin: 10px auto;
-        padding: 20px;
+        padding: 24px;
       }
       h1 { font-size: 1.35rem; }
       h2 { font-size: 1.04rem; }
+      .contact-list { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      main { padding: 20px 18px; }
+      .contact-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
     }
   </style>
 </head>
@@ -144,11 +182,31 @@
       <p>교직원·관리자가 개인정보 수집·이용에 동의하지 않거나 Google 로그인을 하지 않으면 분실물 등록·관리 및 관리자 기능을 이용할 수 없습니다. 분실물 등록에 필요한 필수 항목을 입력하지 않으면 등록할 수 없습니다. 선택 항목은 입력하지 않아도 기본 등록이 가능합니다. 학생·학부모용 조회는 로그인과 개인정보 입력 없이 이용할 수 있습니다.</p>
     </section>
 
-    <p class="contact">
-      개인정보처리자: 남성초등학교 · 주소: 부산광역시 중구 샘길14, 남성초등학교<br />
-      개인정보 보호책임자: 이노섭 교사 · 전화: 051-469-7963 · 권리 요청 담당 이메일:
-      <a href="mailto:leens@nsworld.net">leens@nsworld.net</a>
-    </p>
+    <section class="contact-section" aria-labelledby="contact-title">
+      <h2 id="contact-title">개인정보 보호 문의</h2>
+      <dl class="contact-list">
+        <div class="contact-row">
+          <dt>개인정보처리자</dt>
+          <dd>남성초등학교</dd>
+        </div>
+        <div class="contact-row">
+          <dt>주소</dt>
+          <dd>부산광역시 중구 샘길14, 남성초등학교</dd>
+        </div>
+        <div class="contact-row">
+          <dt>개인정보 보호책임자</dt>
+          <dd>이노섭 교사</dd>
+        </div>
+        <div class="contact-row">
+          <dt>전화</dt>
+          <dd><a href="tel:051-469-7963">051-469-7963</a></dd>
+        </div>
+        <div class="contact-row">
+          <dt>권리 요청 담당 이메일</dt>
+          <dd><a href="mailto:leens@nsworld.net">leens@nsworld.net</a></dd>
+        </div>
+      </dl>
+    </section>
     <footer class="site-footer" aria-label="저작권 정보">
       <p class="footer-copyright">© 2026 남성초등학교. All rights reserved.</p>
     </footer>
