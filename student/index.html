@@ -646,7 +646,7 @@
         <ul class="update-list">
           <li>전체 글꼴과 버튼 크기를 정리해 모바일과 PC에서 더 편하게 볼 수 있도록 개선했습니다.</li>
           <li>분실물 카드와 이용 방법 안내 화면의 시인성을 개선했습니다.</li>
-          <li>업데이트 안내는 일주일 동안 표시되며 오늘 하루 보지 않음 또는 다시 보지 않음을 선택할 수 있습니다.</li>
+          <li>업데이트 안내는 게시일로부터 일주일 동안 표시됩니다. 닫거나 ‘오늘 하루 보지 않음’을 선택하면 오늘은 다시 자동으로 열리지 않습니다.</li>
         </ul>
         <div class="update-actions">
           <button class="btn btn-secondary" id="updateNoticeTodayBtn" type="button">오늘 하루 보지 않음</button>
@@ -860,6 +860,10 @@ const firebaseConfig = {
 
     function closeUpdateNotice() {
       if (updateNoticeModal) updateNoticeModal.style.display = "none";
+    }
+
+    function dismissUpdateNoticeForToday() {
+      setLocalStorageItem(UPDATE_NOTICE_HIDE_UNTIL_KEY, getTodayEndIso());
     }
 
     function shouldAutoOpenUpdateNotice() {
@@ -1079,16 +1083,21 @@ const firebaseConfig = {
       updateNoticeOpenBtn.addEventListener("click", openUpdateNotice);
     }
     if (updateNoticeCloseBtn) {
-      updateNoticeCloseBtn.addEventListener("click", closeUpdateNotice);
+      updateNoticeCloseBtn.addEventListener("click", () => {
+        dismissUpdateNoticeForToday();
+        closeUpdateNotice();
+      });
     }
     if (updateNoticeModal) {
       updateNoticeModal.addEventListener("click", (e) => {
-        if (e.target === updateNoticeModal) closeUpdateNotice();
+        if (e.target !== updateNoticeModal) return;
+        dismissUpdateNoticeForToday();
+        closeUpdateNotice();
       });
     }
     if (updateNoticeTodayBtn) {
       updateNoticeTodayBtn.addEventListener("click", () => {
-        setLocalStorageItem(UPDATE_NOTICE_HIDE_UNTIL_KEY, getTodayEndIso());
+        dismissUpdateNoticeForToday();
         closeUpdateNotice();
       });
     }
@@ -1105,6 +1114,7 @@ const firebaseConfig = {
       if (event.key !== "Escape") return;
       closeModal();
       manualModal.style.display = "none";
+      dismissUpdateNoticeForToday();
       closeUpdateNotice();
     });
 
