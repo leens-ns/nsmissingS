@@ -238,7 +238,7 @@
     }
     .account-add-row {
       display: grid;
-      grid-template-columns: minmax(190px, 1.2fr) minmax(130px, 0.8fr) 96px minmax(130px, 0.8fr) minmax(130px, 0.8fr);
+      grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 0.8fr) 96px auto auto;
       gap: 7px;
       align-items: stretch;
     }
@@ -250,9 +250,6 @@
     }
     .account-add-row .btn {
       padding-inline: 10px;
-    }
-    .account-add-row #addAuthorizedUserBtn {
-      grid-column: 1 / 3;
     }
     .compact-row {
       flex-wrap: nowrap;
@@ -344,7 +341,7 @@
     }
     .authorized-edit {
       display: grid;
-      grid-template-columns: minmax(110px, 1fr) minmax(84px, 96px) minmax(116px, 126px) minmax(116px, 126px) auto auto;
+      grid-template-columns: minmax(140px, 1fr) minmax(84px, 96px) auto auto;
       gap: 6px;
       align-items: center;
       flex: 1;
@@ -627,9 +624,6 @@
       .authorized-edit {
         grid-template-columns: 1fr;
       }
-      .account-add-row #addAuthorizedUserBtn {
-        grid-column: auto;
-      }
       .csv-actions {
         grid-template-columns: 1fr;
       }
@@ -701,8 +695,6 @@
                 <option value="teacher">교사</option>
                 <option value="admin">관리자</option>
               </select>
-              <input id="authorizedStartDateInput" type="date" aria-label="근무 시작일" />
-              <input id="authorizedEndDateInput" type="date" aria-label="근무 종료일" />
               <button id="addAuthorizedUserBtn" class="btn btn-primary" type="button">계정 추가</button>
               <button id="refreshAuthorizedUsersBtn" class="btn btn-outline" type="button">새로고침</button>
             </div>
@@ -713,14 +705,14 @@
                 <button id="bulkDeleteCsvBtn" class="btn btn-danger" type="button">일괄 삭제</button>
                 <button id="downloadCsvTemplateBtn" class="btn btn-muted" type="button">양식 받기</button>
               </div>
-              <p class="csv-help">CSV 열은 <strong>이메일, 권한, 이름, 근무 시작일, 근무 종료일</strong> 순서입니다. 날짜는 <strong>YYYY-MM-DD</strong>로 입력합니다. 삭제는 이메일 열만 있어도 처리됩니다. 내려받는 양식은 엑셀에서 한글이 깨지지 않도록 저장됩니다.</p>
+              <p class="csv-help">CSV 열은 <strong>이메일, 권한, 이름</strong> 순서입니다. 삭제는 이메일 열만 있어도 처리됩니다. 내려받는 양식은 엑셀에서 한글이 깨지지 않도록 저장됩니다.</p>
             </div>
             <ul class="section-help">
-              <li>새 교직원은 이메일, 권한, <strong>개별 근무 시작일·종료일</strong>을 입력한 뒤 추가합니다.</li>
-              <li>근무기간이 없거나 현재 날짜가 근무기간 밖이면 허용 목록에 있어도 접근이 차단됩니다.</li>
+              <li>새 교직원은 이메일과 권한을 입력한 뒤 추가합니다.</li>
+              <li>교직원의 근무가 끝나면 해당 계정을 <strong>즉시 삭제</strong>합니다. 삭제 즉시 앱 접근이 차단되고 동의 기록도 함께 삭제됩니다.</li>
               <li>여러 계정은 <strong>CSV 양식 파일</strong>로 일괄 추가하거나 허용 목록에서 일괄 삭제합니다.</li>
               <li>이전 버전에서 권한만 해제된 계정도 목록에 표시되며, 다시 저장하거나 실제 삭제할 수 있습니다.</li>
-              <li>근무가 끝난 계정을 허용 목록에서 삭제하면 개인정보 처리방침 동의 기록도 함께 삭제됩니다. Firebase Authentication 사용자는 별도로 삭제합니다.</li>
+              <li>Firebase Authentication 로그인 기록은 관리자 콘솔에서 별도로 삭제합니다.</li>
             </ul>
           </div>
           <div class="account-list-panel">
@@ -822,9 +814,8 @@
             <li>공용 기기에서는 관리 작업을 마친 뒤 반드시 로그아웃했는지 확인</li>
             <li>Firebase Web API 키의 HTTP 리퍼러를 <code>leens-ns.github.io</code> 주소로 제한했는지 확인</li>
             <li><code>firestore.rules</code> 배포 여부 확인</li>
-            <li>허용 계정마다 남성초등학교 근무 시작일·근무 종료일이 정확히 입력되어 있는지 확인</li>
-            <li>허용 계정 목록에 퇴직자나 불필요 계정이 없는지 확인</li>
-            <li>근무 종료 계정을 삭제한 뒤 필요하면 Firebase Authentication 사용자도 삭제했는지 확인</li>
+            <li>허용 계정 목록에 근무가 끝난 교직원이나 불필요 계정이 없는지 확인</li>
+            <li>근무 종료 계정을 즉시 삭제한 뒤 필요하면 Firebase Authentication 사용자도 삭제했는지 확인</li>
             <li>개인정보 처리방침 동의 기록은 계정·방침 버전·동의 시각만 저장되고, 본인 외에는 수정할 수 없으며 허용 계정 삭제 시 함께 삭제되는지 확인</li>
             <li>공개 조회 데이터에는 물건 확인에 필요한 필드만 동기화되는지 확인</li>
             <li>영구 삭제 전 휴지통에서 복구 가능 여부 확인</li>
@@ -859,7 +850,7 @@
     });
     const AUTHORIZED_USERS_COLLECTION = "authorized_users";
     const PRIVACY_CONSENTS_COLLECTION = "privacy_consents";
-    const PRIVACY_POLICY_VERSION = "2026-08-09";
+    const PRIVACY_POLICY_VERSION = "2026-08-09-r2";
     const APP_SETTINGS_COLLECTION = "app_settings";
     const PLACE_OPTIONS_DOC = "place_options";
     const PUBLIC_LOST_ITEMS_COLLECTION = "public_lost_items";
@@ -967,50 +958,6 @@
         })
         .slice(0, 30);
     }
-    function isValidDateString(value) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-      const [year, month, day] = value.split("-").map(Number);
-      const date = new Date(Date.UTC(year, month - 1, day));
-      return date.getUTCFullYear() === year
-        && date.getUTCMonth() === month - 1
-        && date.getUTCDate() === day;
-    }
-    function isEmploymentPeriodActive(data) {
-      if (!data) return false;
-      if (!data.employmentStartAt || !data.employmentStartAt.toDate) return false;
-      if (!data.employmentEndAt || !data.employmentEndAt.toDate) return false;
-      const now = new Date();
-      if (now < data.employmentStartAt.toDate()) return false;
-      if (now > data.employmentEndAt.toDate()) return false;
-      return true;
-    }
-    function getEmploymentFields(startDate, endDate) {
-      const start = String(startDate || "").trim();
-      const end = String(endDate || "").trim();
-      if (!isValidDateString(start) || !isValidDateString(end)) {
-        throw new Error("근무 시작일과 근무 종료일을 YYYY-MM-DD 형식으로 입력해 주세요.");
-      }
-      const startAt = new Date(start + "T00:00:00+09:00");
-      const endAt = new Date(end + "T23:59:59.999+09:00");
-      if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || startAt > endAt) {
-        throw new Error("근무 시작일은 종료일보다 늦을 수 없습니다.");
-      }
-      return {
-        employmentStartDate: start,
-        employmentEndDate: end,
-        employmentStartAt: firebase.firestore.Timestamp.fromDate(startAt),
-        employmentEndAt: firebase.firestore.Timestamp.fromDate(endAt)
-      };
-    }
-    function formatDateInput(value) {
-      if (!value) return "";
-      if (typeof value === "string") return value.slice(0, 10);
-      if (value.toDate) {
-        const date = value.toDate();
-        return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
-      }
-      return "";
-    }
     function createPublicLostItemPayload(data) {
       if (!data || normalizeLostItemStatus(data.status) !== "stored") return null;
       return {
@@ -1084,13 +1031,10 @@
       if (!doc.exists) return null;
       const data = doc.data() || {};
       if (data.active !== true) return null;
-      if (!isEmploymentPeriodActive(data)) return null;
       return {
         email: normalized,
         role: data.role === "admin" ? "admin" : "teacher",
-        active: true,
-        employmentStartDate: data.employmentStartDate || "",
-        employmentEndDate: data.employmentEndDate || ""
+        active: true
       };
     }
     async function hasCurrentPrivacyConsent(email) {
@@ -1128,7 +1072,7 @@
         loginBtn.disabled = !(privacyConsent && privacyConsent.checked);
         logoutBtn.style.display = "inline-flex";
       } else if (currentUser) {
-        authMessage.textContent = currentUser.email + " 계정은 관리자 권한이 없거나 근무기간이 유효하지 않습니다.";
+        authMessage.textContent = currentUser.email + " 계정은 관리자 권한이 없습니다.";
         loginBtn.style.display = "inline-flex";
         loginBtn.textContent = "다른 계정으로 로그인";
         loginBtn.disabled = false;
@@ -1445,16 +1389,6 @@
       }
       filtered.forEach((user) => {
         const email = normalizeEmail(user.email || user.id);
-        const periodStart = formatDateInput(user.employmentStartDate || user.employmentStartAt);
-        const periodEnd = formatDateInput(user.employmentEndDate || user.employmentEndAt);
-        const hasRulePeriod = !!(user.employmentStartAt && user.employmentStartAt.toDate
-          && user.employmentEndAt && user.employmentEndAt.toDate);
-        const periodText = user.active !== true
-          ? " · 권한 해제됨 · 접근 차단"
-          : hasRulePeriod && periodStart && periodEnd
-          ? " · 근무 " + periodStart + " ~ " + periodEnd
-            + (isEmploymentPeriodActive(user) ? "" : " · 현재 접근 차단")
-          : " · 근무기간 미등록 · 접근 차단";
         const row = document.createElement("div");
         row.className = "authorized-user";
         const label = document.createElement("div");
@@ -1465,7 +1399,7 @@
         detailText.textContent = (user.role === "admin" ? "관리자" : "교사")
           + (user.name ? " · " + user.name : "")
           + (user.bootstrap ? " · 최초 관리자" : "")
-          + (user.bootstrap ? "" : periodText);
+          + (user.active === true || user.bootstrap ? "" : " · 권한 해제됨 · 접근 차단");
         label.appendChild(emailText);
         label.appendChild(document.createElement("br"));
         label.appendChild(detailText);
@@ -1485,27 +1419,13 @@
         roleSelect.value = user.role === "admin" ? "admin" : "teacher";
         roleSelect.disabled = user.bootstrap || email === normalizeEmail(currentUser && currentUser.email);
 
-        const startDateInput = document.createElement("input");
-        startDateInput.type = "date";
-        startDateInput.value = formatDateInput(user.employmentStartDate || user.employmentStartAt);
-        startDateInput.setAttribute("aria-label", email + " 근무 시작일");
-        startDateInput.disabled = user.bootstrap;
-
-        const endDateInput = document.createElement("input");
-        endDateInput.type = "date";
-        endDateInput.value = formatDateInput(user.employmentEndDate || user.employmentEndAt);
-        endDateInput.setAttribute("aria-label", email + " 근무 종료일");
-        endDateInput.disabled = user.bootstrap;
-
         const saveBtn = document.createElement("button");
         saveBtn.className = "btn btn-outline";
         saveBtn.textContent = "저장";
         saveBtn.disabled = user.bootstrap;
         saveBtn.addEventListener("click", () => updateAuthorizedUser(email, {
           name: nameInput.value.trim(),
-          role: roleSelect.value === "admin" ? "admin" : "teacher",
-          employmentStartDate: startDateInput.value,
-          employmentEndDate: endDateInput.value
+          role: roleSelect.value === "admin" ? "admin" : "teacher"
         }));
 
         const removeBtn = document.createElement("button");
@@ -1516,8 +1436,6 @@
 
         editBox.appendChild(nameInput);
         editBox.appendChild(roleSelect);
-        editBox.appendChild(startDateInput);
-        editBox.appendChild(endDateInput);
         editBox.appendChild(saveBtn);
         editBox.appendChild(removeBtn);
         row.appendChild(label);
@@ -1530,8 +1448,6 @@
       const emailInput = document.getElementById("authorizedEmailInput");
       const nameInput = document.getElementById("authorizedNameInput");
       const roleInput = document.getElementById("authorizedRoleInput");
-      const startDateInput = document.getElementById("authorizedStartDateInput");
-      const endDateInput = document.getElementById("authorizedEndDateInput");
       const email = normalizeEmail(emailInput.value);
       const name = (nameInput.value || "").trim().slice(0, 40);
       const role = roleInput.value === "admin" ? "admin" : "teacher";
@@ -1543,27 +1459,17 @@
         alert("nsworld.net 계정만 추가할 수 있습니다.");
         return;
       }
-      let employmentFields;
-      try {
-        employmentFields = getEmploymentFields(startDateInput.value, endDateInput.value);
-      } catch (err) {
-        alert(err.message);
-        return;
-      }
       try {
         await db.collection(AUTHORIZED_USERS_COLLECTION).doc(email).set({
           email,
           role,
           name,
           active: true,
-          ...employmentFields,
           addedBy: normalizeEmail(currentUser.email),
           addedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         emailInput.value = "";
         nameInput.value = "";
-        startDateInput.value = "";
-        endDateInput.value = "";
         await loadAuthorizedUsers();
       } catch (err) {
         console.error("허용 계정 추가 오류:", err);
@@ -1578,20 +1484,12 @@
         return;
       }
       const role = updates.role === "admin" ? "admin" : "teacher";
-      let employmentFields;
-      try {
-        employmentFields = getEmploymentFields(updates.employmentStartDate, updates.employmentEndDate);
-      } catch (err) {
-        alert(err.message);
-        return;
-      }
       try {
         await db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).set({
           email: normalized,
           role,
           name: String(updates.name || "").trim().slice(0, 40),
           active: true,
-          ...employmentFields,
           updatedBy: normalizeEmail(currentUser.email),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -1643,9 +1541,7 @@
       return rows.map((cells) => ({
         email: normalizeEmail(cells[0]),
         role: normalizeRole(cells[1]),
-        name: (cells[2] || "").trim(),
-        employmentStartDate: (cells[3] || "").trim(),
-        employmentEndDate: (cells[4] || "").trim()
+        name: (cells[2] || "").trim()
       })).filter((row) => row.email);
     }
     async function bulkAddCsvUsers() {
@@ -1664,28 +1560,14 @@
           alert("추가할 수 있는 nsworld.net 계정이 없습니다.");
           return;
         }
-        const invalidRows = schoolRows.filter((row) => {
-          try {
-            getEmploymentFields(row.employmentStartDate, row.employmentEndDate);
-            return false;
-          } catch (err) {
-            return true;
-          }
-        });
-        if (invalidRows.length) {
-          alert("추가할 계정마다 근무 시작일과 근무 종료일을 입력해 주세요.");
-          return;
-        }
         const ok = confirm(schoolRows.length + "개 계정을 허용 목록에 추가하시겠습니까?");
         if (!ok) return;
         for (const row of schoolRows) {
-          const employmentFields = getEmploymentFields(row.employmentStartDate, row.employmentEndDate);
           await db.collection(AUTHORIZED_USERS_COLLECTION).doc(row.email).set({
             email: row.email,
             role: row.role,
             name: row.name.slice(0, 40),
             active: true,
-            ...employmentFields,
             addedBy: normalizeEmail(currentUser.email),
             addedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
@@ -1732,7 +1614,7 @@
       }
     }
     function downloadCsvTemplate() {
-      const csv = "\uFEFF이메일,권한,이름,근무 시작일,근무 종료일\nteacher1@nsworld.net,교사,홍길동,2026-03-01,2027-02-28\nadmin1@nsworld.net,관리자,김관리,2026-03-01,2027-02-28\n";
+      const csv = "\uFEFF이메일,권한,이름\nteacher1@nsworld.net,교사,홍길동\nadmin1@nsworld.net,관리자,김관리\n";
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1745,7 +1627,7 @@
     }
     async function deleteAuthorizedUser(email) {
       if (!isAdmin || isBootstrapAdmin(email)) return;
-      if (!confirm(email + " 계정을 허용 목록에서 삭제하시겠습니까?\n삭제 즉시 분실물 관리 권한을 잃습니다.")) return;
+      if (!confirm(email + " 계정을 허용 목록에서 삭제하시겠습니까?\n삭제 즉시 앱 접근이 차단되고 개인정보 처리방침 동의 기록도 함께 삭제됩니다.")) return;
       try {
         const batch = db.batch();
         batch.delete(db.collection(AUTHORIZED_USERS_COLLECTION).doc(email));

@@ -14,16 +14,7 @@ service cloud.firestore {
     }
 
     function currentPrivacyPolicyVersion() {
-      return "2026-08-09";
-    }
-
-    function isEmploymentActive(data) {
-      return 'employmentStartAt' in data
-        && 'employmentEndAt' in data
-        && data.employmentStartAt is timestamp
-        && data.employmentEndAt is timestamp
-        && request.time >= data.employmentStartAt
-        && request.time <= data.employmentEndAt;
+      return "2026-08-09-r2";
     }
 
     function hasAuthorizedAccount() {
@@ -35,10 +26,6 @@ service cloud.firestore {
         && (
           isBootstrapAdmin()
           || get(/databases/$(database)/documents/authorized_users/$(request.auth.token.email)).data.active == true
-        )
-        && (
-          isBootstrapAdmin()
-          || isEmploymentActive(get(/databases/$(database)/documents/authorized_users/$(request.auth.token.email)).data)
         );
     }
 
@@ -117,12 +104,7 @@ service cloud.firestore {
           "disabledBy", "disabledAt",
           "employmentStartDate", "employmentEndDate",
           "employmentStartAt", "employmentEndAt"
-        ])
-        && "employmentStartAt" in request.resource.data
-        && "employmentEndAt" in request.resource.data
-        && request.resource.data.employmentStartAt is timestamp
-        && request.resource.data.employmentEndAt is timestamp
-        && request.resource.data.employmentStartAt <= request.resource.data.employmentEndAt;
+        ]);
       allow delete: if isAdmin()
         && email != "leens@nsworld.net"
         && request.auth.token.email != email;
