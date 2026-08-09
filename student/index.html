@@ -3,7 +3,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>남성초등학교 분실물 센터 - 학생용</title>
+  <title>남성초등학교 분실물 센터 - 학생/학부모용</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#facc15" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -72,11 +72,12 @@
       object-fit: contain;
     }
     .page-title {
-      margin: 6px 0 5px;
+      margin: 6px 0 4px;
       font-size: var(--page-title-size);
       font-weight: 600;
       color: #2563eb;
-      line-height: 1.18;
+      line-height: 1.2;
+      overflow-wrap: break-word;
     }
     header p {
       margin: 0;
@@ -310,9 +311,11 @@
       max-width: 840px;
       width: 100%;
       max-height: 90vh;
-      overflow: hidden;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .update-modal {
       max-width: min(960px, calc(100vw - 64px));
@@ -396,6 +399,29 @@
       color: #64748b;
       border-color: #cbd5e1;
       cursor: default;
+    }
+    .site-footer {
+      width: 100%;
+      margin: 18px auto 0;
+      padding: 14px 10px 4px;
+      border-top: 1px solid #dbe3ef;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.75rem;
+      line-height: 1.55;
+    }
+    .footer-policy-link {
+      color: #475569;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .footer-copyright {
+      max-width: 760px;
+      margin: 4px auto 0;
+      color: #64748b;
+      font-size: 0.7rem;
+      word-break: keep-all;
+      overflow-wrap: break-word;
     }
     .manual-list {
       margin: 0;
@@ -506,7 +532,7 @@
       <h1 class="page-title">남성초등학교 분실물 센터</h1>
       <p>분실물을 한 눈에 확인하고, 잃어버린 물건을 찾아가세요!</p>
       <div class="quick-links" aria-label="도움말">
-        <button class="btn btn-link install-btn" id="appInstallBtn" type="button">앱 설치</button>
+        <button class="btn btn-link install-btn" id="appInstallBtn" type="button">조회 앱 설치</button>
         <button class="btn btn-link" id="updateNoticeOpenBtn" type="button">업데이트 안내</button>
         <button class="btn btn-link" id="manualOpenBtn" type="button">이용 방법</button>
       </div>
@@ -515,15 +541,15 @@
     <div class="card">
       <div class="notice-box">
         <p class="notice">※ 이 페이지에서는 분실물 조회만 가능합니다.</p>
-        <p class="notice">※ 물건 보관 후 한 달이 지나면 물품을 폐기처리합니다.</p>
-              <p class="notice">※ 자신의 물건이 보일 경우 보관 장소에 방문하여 물건을 찾아가 주세요.</p>
+        <p class="notice">※ 분실물은 등록일로부터 30일 동안 보관한 뒤 폐기할 수 있습니다.</p>
+        <p class="notice">※ 자신의 물건이 보일 경우 카드의 보관 장소를 확인하고 방문해 주세요.</p>
       </div>
 
       <div class="search-row">
         <input
           type="text"
           id="searchInput"
-          placeholder="분실물 검색 (종류, 장소, 설명 등)"
+          placeholder="분실물 검색 (분류, 장소, 설명 등)"
         />
         <button class="btn btn-primary" id="searchBtn">검색</button>
         <button class="btn btn-secondary" id="resetBtn">검색/필터 지우기</button>
@@ -548,7 +574,7 @@
         </div>
       </div>
 
-      <!-- 카테고리별 필터 버튼 (주인 찾음 / 폐기 완료는 학생용에서 숨김) -->
+      <!-- 분류 필터 버튼 (주인 찾음 / 폐기 완료는 학생/학부모용에서 숨김) -->
       <div class="cat-row" id="categoryButtons">
         <button class="btn-chip btn-chip-active" data-category="전체">전체</button>
         <button class="btn-chip" data-category="의류/가방">의류/가방</button>
@@ -570,9 +596,13 @@
         더 보기
       </button>
     </div>
+    <footer class="site-footer" aria-label="사이트 정보">
+      <a class="footer-policy-link" href="../privacy-policy.html" target="_blank" rel="noreferrer">개인정보 처리방침</a>
+      <p class="footer-copyright">© 2026 남성초등학교. All rights reserved.</p>
+    </footer>
   </div>
 
-  <div class="modal-overlay" id="manualModal">
+  <div class="modal-overlay" id="manualModal" role="dialog" aria-modal="true" aria-label="이용 방법">
     <div class="modal">
       <div class="modal-header">
         <div class="modal-title">이용 방법</div>
@@ -580,25 +610,34 @@
       </div>
       <div class="modal-body">
         <ul class="manual-list">
-          <li>검색창에 물건 이름, 종류, 습득 장소를 입력해 찾습니다.</li>
-          <li>필터 버튼을 누르면 해당 종류만 빠르게 모아볼 수 있습니다.</li>
-          <li>카드의 보관 장소를 확인한 뒤 해당 장소에 방문합니다.</li>
+          <li>검색창에 물건 이름, 분류, 습득·보관 장소를 입력해 찾습니다.</li>
+          <li>분류 버튼을 누르면 해당 분실물만 빠르게 모아볼 수 있습니다.</li>
+          <li>카드를 누르면 사진, 습득 장소·시간, 보관 장소를 자세히 확인할 수 있습니다.</li>
+          <li>검색/필터 지우기를 누르면 전체 목록으로 돌아갑니다.</li>
+          <li>배포된 HTTPS 주소에서는 조회 앱 설치 버튼을 눌러 이 화면을 앱처럼 사용할 수 있습니다.</li>
           <li>이 화면에는 현재 보관 중인 물건만 표시됩니다.</li>
+          <li>분실물은 등록 후 30일이 지나면 폐기될 수 있으므로 발견하면 보관 장소를 확인해 주세요.</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <div class="modal-overlay" id="updateNoticeModal">
+  <div class="modal-overlay" id="updateNoticeModal" role="dialog" aria-modal="true" aria-label="업데이트 안내">
     <div class="modal update-modal">
       <div class="modal-header">
-        <div class="modal-title">v2.1 업데이트 안내</div>
+        <div class="modal-title">v2.2 업데이트 안내</div>
         <button class="modal-close" id="updateNoticeCloseBtn" aria-label="닫기">×</button>
       </div>
       <div class="modal-body">
+        <div class="update-badge">v2.2 업데이트 내용</div>
+        <ul class="update-list">
+          <li>검색·분류·상세 보기의 용어와 이용 방법을 한 기준으로 정리했습니다.</li>
+          <li>분실물 보관 기준을 등록 후 30일로 명확하게 안내합니다.</li>
+          <li>목록을 불러오지 못했을 때 화면에서 원인과 다시 시도 방법을 확인할 수 있습니다.</li>
+        </ul>
         <div class="update-badge">v2.1 업데이트 내용</div>
         <ul class="update-list">
-          <li>학생/학부모용 조회 화면 주소와 교사용 등록/관리 화면 주소를 분리했습니다.</li>
+          <li>학생/학부모용 조회 화면 주소와 교직원용 등록/관리 화면 주소를 분리했습니다.</li>
           <li>조회 화면을 앱처럼 설치해서 사용할 수 있도록 지원했습니다.</li>
           <li>검색창, 분류 필터, 보관 장소 확인 흐름을 더 단순하게 정리했습니다.</li>
           <li>현재 보관 중인 분실물만 조회 화면에 표시되도록 유지됩니다.</li>
@@ -618,7 +657,7 @@
   </div>
 
   <!-- 상세 모달 (조회 전용) -->
-  <div class="modal-overlay" id="detailModal">
+  <div class="modal-overlay" id="detailModal" role="dialog" aria-modal="true" aria-label="분실물 상세 정보">
     <div class="modal">
       <div class="modal-header">
         <div class="modal-title" id="modalTitle"></div>
@@ -630,11 +669,10 @@
         </div>
         <div class="modal-body">
           <div class="modal-meta">
-            <p><strong>카테고리:</strong> <span id="modalCategory"></span></p>
+            <p><strong>분류:</strong> <span id="modalCategory"></span></p>
             <p><strong>보관 장소:</strong> <span id="modalStorage" class="storage-badge"></span></p>
             <p><strong>습득 장소:</strong> <span id="modalFoundPlace"></span></p>
             <p><strong>습득 시간:</strong> <span id="modalFoundTime"></span></p>
-            <p><strong>습득자:</strong> <span id="modalFinder"></span></p>
             <p><strong>등록일:</strong> <span id="modalCreatedAt"></span></p>
           </div>
         </div>
@@ -683,6 +721,7 @@ const firebaseConfig = {
     let isLoading = false;
     const MAX_PUBLIC_ITEMS = 60;
     const PAGE_SIZE = 12;
+    const DEFAULT_EMPTY_MESSAGE = "현재 보관 중인 분실물이 없습니다.";
     let displayCount = PAGE_SIZE;
 
 
@@ -708,7 +747,6 @@ const firebaseConfig = {
     const modalStorage = document.getElementById("modalStorage");
     const modalFoundPlace = document.getElementById("modalFoundPlace");
     const modalFoundTime = document.getElementById("modalFoundTime");
-    const modalFinder = document.getElementById("modalFinder");
     const modalCreatedAt = document.getElementById("modalCreatedAt");
     const manualOpenBtn = document.getElementById("manualOpenBtn");
     const manualCloseBtn = document.getElementById("manualCloseBtn");
@@ -719,8 +757,8 @@ const firebaseConfig = {
     const updateNoticeModal = document.getElementById("updateNoticeModal");
     const updateNoticeTodayBtn = document.getElementById("updateNoticeTodayBtn");
     const updateNoticeNeverBtn = document.getElementById("updateNoticeNeverBtn");
-    const UPDATE_NOTICE_ID = "student-update-v2.1-clean-2026-07-13";
-    const UPDATE_NOTICE_PUBLISHED_AT = "2026-07-13T00:00:00+09:00";
+    const UPDATE_NOTICE_ID = "student-update-v2.2-consistency-2026-08-09";
+    const UPDATE_NOTICE_PUBLISHED_AT = "2026-08-09T00:00:00+09:00";
     const UPDATE_NOTICE_SHOW_DAYS = 7;
     const UPDATE_NOTICE_NEVER_KEY = "nsmissing.studentUpdateNotice.never";
     const UPDATE_NOTICE_HIDE_UNTIL_KEY = "nsmissing.studentUpdateNotice.hideUntil";
@@ -736,17 +774,17 @@ const firebaseConfig = {
       appInstallBtn.classList.remove("is-ready", "is-installed");
       appInstallBtn.disabled = false;
       if (isStandaloneApp()) {
-        appInstallBtn.textContent = "앱 설치됨";
+        appInstallBtn.textContent = "조회 앱 설치됨";
         appInstallBtn.classList.add("is-installed");
         appInstallBtn.disabled = true;
       } else if (deferredInstallPrompt) {
-        appInstallBtn.textContent = "앱 설치";
+        appInstallBtn.textContent = "조회 앱 설치";
         appInstallBtn.classList.add("is-ready");
       } else if (!installPromptChecked) {
         appInstallBtn.textContent = "설치 확인 중";
         appInstallBtn.disabled = true;
       } else {
-        appInstallBtn.textContent = "설치 방법";
+        appInstallBtn.textContent = "조회 앱 설치 방법";
       }
     }
 
@@ -860,8 +898,7 @@ const firebaseConfig = {
             item.title,
             item.category,
             item.storageLocation,
-            item.foundPlace,
-            item.finderName
+            item.foundPlace
           ];
           return fields.some((f) => (f || "").toLowerCase().includes(q));
         });
@@ -883,6 +920,9 @@ const firebaseConfig = {
       updateSummary(visibleList, totalCount);
 
       if (!visibleList.length) {
+        emptyMessage.textContent = trimmed || currentCategory !== "전체"
+          ? "선택한 검색·필터 조건에 맞는 분실물이 없습니다."
+          : DEFAULT_EMPTY_MESSAGE;
         emptyMessage.style.display = "block";
         if (loadMoreBtn) loadMoreBtn.style.display = "none";
         return;
@@ -931,11 +971,8 @@ const firebaseConfig = {
         const timeSpan = document.createElement("span");
         timeSpan.textContent =
           "습득 시간: " + formatDateTime(item.foundTime || item.createdAt);
-        const finderSpan = document.createElement("span");
-        finderSpan.textContent = "습득자: " + (item.finderName || "-");
         meta.appendChild(placeSpan);
         meta.appendChild(timeSpan);
-        meta.appendChild(finderSpan);
 
         const footer = document.createElement("div");
         footer.className = "item-footer";
@@ -973,7 +1010,6 @@ const firebaseConfig = {
       modalStorage.textContent = item.storageLocation || "-";
       modalFoundPlace.textContent = item.foundPlace || "-";
       modalFoundTime.textContent = formatDateTime(item.foundTime || item.createdAt);
-      modalFinder.textContent = item.finderName || "-";
       modalCreatedAt.textContent = formatDateTime(item.createdAt);
       detailModal.style.display = "flex";
     }
@@ -1065,6 +1101,12 @@ const firebaseConfig = {
     if (shouldAutoOpenUpdateNotice()) {
       setTimeout(openUpdateNotice, 250);
     }
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      closeModal();
+      manualModal.style.display = "none";
+      closeUpdateNotice();
+    });
 
     async function loadItems(isInitial = false) {
       if (isLoading) return;
@@ -1072,6 +1114,7 @@ const firebaseConfig = {
       if (loadingMessage) loadingMessage.style.display = "block";
       if (emptyMessage) emptyMessage.style.display = "none";
       try {
+        if (emptyMessage) emptyMessage.textContent = DEFAULT_EMPTY_MESSAGE;
         items = [];
         const seen = new Set();
         const addSnapshotItems = (snapshot) => {
@@ -1087,8 +1130,7 @@ const firebaseConfig = {
               storageLocation: data.storageLocation || "",
               foundPlace: data.foundPlace || "",
               foundTime: normalizeTs(data.foundTime),
-              finderName: data.finderName || "",
-              createdAt: normalizeTs(data.createdAt) || new Date().toISOString(),
+              createdAt: normalizeTs(data.createdAt) || normalizeTs(data.foundTime),
               imageDataUrl: data.imageDataUrl || "",
               imageUrl: data.imageUrl || "",
               status: "stored"
@@ -1096,7 +1138,7 @@ const firebaseConfig = {
           });
         };
 
-        const storedSnapshot = await db.collection("lost_items")
+        const storedSnapshot = await db.collection("public_lost_items")
           .where("status", "==", "stored")
           .limit(MAX_PUBLIC_ITEMS)
           .get();
@@ -1104,7 +1146,7 @@ const firebaseConfig = {
 
         const remainingCount = MAX_PUBLIC_ITEMS - items.length;
         if (remainingCount > 0) {
-          const legacySnapshot = await db.collection("lost_items")
+          const legacySnapshot = await db.collection("public_lost_items")
             .where("status", "==", "보관 중")
             .limit(remainingCount)
             .get();
@@ -1117,7 +1159,10 @@ const firebaseConfig = {
         renderItems(searchInput.value);
       } catch (err) {
         console.error("분실물 불러오기 오류:", err);
-        alert("분실물 목록을 불러오는 중 오류가 발생했습니다.");
+        if (emptyMessage) {
+          emptyMessage.textContent = "분실물 목록을 불러오지 못했습니다. 연결 상태를 확인한 뒤 화면을 새로고침해 주세요.";
+          emptyMessage.style.display = "block";
+        }
       } finally {
         isLoading = false;
         if (loadingMessage) loadingMessage.style.display = "none";
