@@ -1263,6 +1263,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="../cursor-pagination.js"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -1474,27 +1475,31 @@ const firebaseConfig = {
         };
       }
 
-      async function syncPublicLostItem(itemId, data) {
+      async function updateLostItemAndPublic(itemId, updates) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
+        const sourceRef = db.collection("lost_items").doc(itemId);
         const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId);
-        let sourceData = data;
-        if (!sourceData) {
-          const sourceDoc = await db.collection("lost_items").doc(itemId).get();
-          if (!sourceDoc.exists) {
-            await publicRef.delete().catch((err) => {
-              if (err && err.code !== "not-found") throw err;
-            });
-            return;
-          }
-          sourceData = sourceDoc.data() || {};
-        }
-        const publicData = createPublicLostItemPayload(sourceData);
-        if (!publicData) {
-          await publicRef.delete().catch((err) => {
-            if (err && err.code !== "not-found") throw err;
-          });
-          return;
-        }
-        await publicRef.set(publicData);
+        await waitForAuthOperation(db.runTransaction(async (transaction) => {
+          const sourceDoc = await transaction.get(sourceRef);
+          if (!sourceDoc.exists) throw new Error("분실물 정보가 이미 삭제되었습니다.");
+          const nextData = { ...(sourceDoc.data() || {}), ...updates };
+          transaction.update(sourceRef, updates);
+          const publicData = createPublicLostItemPayload(nextData);
+          if (publicData) transaction.set(publicRef, publicData);
+          else transaction.delete(publicRef);
+        }), sessionOperation);
+      }
+
+      async function deleteLostItemAndPublic(itemId) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
+        const batch = db.batch();
+        batch.delete(db.collection("lost_items").doc(itemId));
+        batch.delete(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId));
+        await waitForAuthOperation(batch.commit(), sessionOperation);
       }
 
       function statusLabel(item) {
@@ -1528,12 +1533,15 @@ const firebaseConfig = {
       }
 
       async function getAuthorizedUser(email) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
         const normalized = normalizeEmail(email);
         if (!normalized) return null;
         if (isBootstrapAdmin(normalized)) {
           return { email: normalized, role: "admin", active: true, bootstrap: true };
         }
-        const doc = await db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).get();
+        const doc = await waitForAuthOperation(db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).get(), sessionOperation);
         if (!doc.exists) return null;
         const data = doc.data() || {};
         if (data.active !== true) return null;
@@ -1545,25 +1553,31 @@ const firebaseConfig = {
       }
 
       async function hasCurrentPrivacyConsent(email) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
         const normalized = normalizeEmail(email);
         if (!normalized) return false;
-        const doc = await db.collection(PRIVACY_CONSENTS_COLLECTION).doc(normalized).get();
+        const doc = await waitForAuthOperation(db.collection(PRIVACY_CONSENTS_COLLECTION).doc(normalized).get(), sessionOperation);
         if (!doc.exists) return false;
         const data = doc.data() || {};
         return data.consentGiven === true && data.policyVersion === PRIVACY_POLICY_VERSION;
       }
 
       async function saveCurrentPrivacyConsent() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
         const email = normalizeEmail(currentUser && currentUser.email);
         if (!email || !currentAuthorizedRole) {
           throw new Error("허용된 교직원 계정을 확인할 수 없습니다.");
         }
-        await db.collection(PRIVACY_CONSENTS_COLLECTION).doc(email).set({
+        await waitForAuthOperation(db.collection(PRIVACY_CONSENTS_COLLECTION).doc(email).set({
           email,
           consentGiven: true,
           policyVersion: PRIVACY_POLICY_VERSION,
           consentedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }), sessionOperation);
       }
 
       // ===================== DOM 요소 =====================
@@ -1696,6 +1710,10 @@ const firebaseConfig = {
       let currentModalItemId = null;
       let isEditMode = false;
       let currentUser = null;
+      let authGeneration = 0;
+      function captureAuthOperation() { return currentUser ? {user:currentUser, uid:currentUser.uid, generation:authGeneration} : null; }
+      function isCurrentAuthOperation(operation) { return !!operation && operation.user === currentUser && operation.uid === currentUser?.uid && operation.generation === authGeneration; }
+      async function waitForAuthOperation(promise, operation) { const result = await promise; if (!isCurrentAuthOperation(operation)) throw new Error("AUTH_OPERATION_STALE"); return result; }
       let currentAuthorizedRole = "";
       let hasPrivacyConsent = false;
       let isTeacher = false;
@@ -1706,8 +1724,9 @@ const firebaseConfig = {
       let installPromptChecked = false;
       const FIRST_PAGE_SIZE = 4;
       const PAGE_SIZE = 3;
-      const MAX_STORED_MANAGEMENT_ITEMS = 60;
-      const MAX_STATUS_MANAGEMENT_ITEMS = 100;
+      const MAX_STORED_REGISTRATION_ITEMS = 60;
+      const MANAGEMENT_FETCH_PAGE_SIZE = 100;
+      let hasMoreManagementItems = true;
       let displayCount = FIRST_PAGE_SIZE;
       let loadedStatusGroup = "";
       const DEFAULT_EMPTY_MESSAGE = "아직 등록된 분실물이 없습니다. 교직원이 분실물을 등록하면 이곳에 표시됩니다.";
@@ -1897,16 +1916,21 @@ const firebaseConfig = {
       }
 
       async function loadPlaceOptions() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
         renderStorageOptions(DEFAULT_STORAGE_LOCATIONS);
         renderQuickFoundPlaces(DEFAULT_FOUND_PLACES);
         if (!isTeacher || !currentUser) return;
         try {
-          const doc = await db.collection(APP_SETTINGS_COLLECTION).doc(PLACE_OPTIONS_DOC).get();
+          const doc = await waitForAuthOperation(db.collection(APP_SETTINGS_COLLECTION).doc(PLACE_OPTIONS_DOC).get(), sessionOperation);
           if (!doc.exists) return;
           const data = doc.data() || {};
           renderStorageOptions(data.storageLocations);
           renderQuickFoundPlaces(data.foundPlaces);
         } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
           console.error("장소 설정 불러오기 오류:", err);
         }
       }
@@ -1976,7 +2000,13 @@ const firebaseConfig = {
       }
 
       auth.onAuthStateChanged(async (user) => {
+        authGeneration += 1;
         currentUser = user;
+        const authOperation = captureAuthOperation();
+        NSMissingPagination.invalidateRequests();
+        items = []; selectedIds.clear(); lastVisible = null; isLoading = false; hasMoreManagementItems = false;
+        if (itemsContainer) { itemsContainer.innerHTML = ""; itemsContainer.style.display = "none"; }
+        if (loadMoreBtn) loadMoreBtn.style.display = "none";
         currentAuthorizedRole = "";
         hasPrivacyConsent = false;
         isTeacher = false;
@@ -1990,9 +2020,11 @@ const firebaseConfig = {
           } else {
             try {
               const authorizedUser = await getAuthorizedUser(email);
+              if (!isCurrentAuthOperation(authOperation)) return;
               if (authorizedUser) {
                 currentAuthorizedRole = authorizedUser.role === "admin" ? "admin" : "teacher";
                 hasPrivacyConsent = await hasCurrentPrivacyConsent(email);
+                if (!isCurrentAuthOperation(authOperation)) return;
                 isTeacher = hasPrivacyConsent;
                 isAdmin = hasPrivacyConsent && currentAuthorizedRole === "admin";
               } else {
@@ -2001,6 +2033,7 @@ const firebaseConfig = {
                 return;
               }
             } catch (err) {
+              if (!isCurrentAuthOperation(authOperation)) return;
               console.error("권한 확인 오류:", err);
               alert(authorizationErrorMessage(err));
             }
@@ -2021,7 +2054,7 @@ const firebaseConfig = {
             itemsContainer.style.display = "none";
           }
           if (emptyMessage) emptyMessage.style.display = "none";
-          if (loadMoreBtn) loadMoreBtn.style.display = "none";
+          if (loadMoreBtn) loadMoreBtn.style.display = hasMoreManagementItems ? "block" : "none";
           items = [];
           selectedIds.clear();
           updateBulkButtonsState();
@@ -2031,22 +2064,24 @@ const firebaseConfig = {
       if (loginBtn) {
         loginBtn.addEventListener("click", async () => {
           if (currentUser && currentAuthorizedRole && !hasPrivacyConsent) {
+            const operation = captureAuthOperation();
             if (!privacyConsent || !privacyConsent.checked) {
               alert("개인정보 처리방침을 확인하고 동의해 주세요.");
               return;
             }
             loginBtn.disabled = true;
             try {
-              await saveCurrentPrivacyConsent();
+              await waitForAuthOperation(saveCurrentPrivacyConsent(), operation);
               hasPrivacyConsent = true;
               isTeacher = true;
               isAdmin = currentAuthorizedRole === "admin";
               updateAuthUI();
               updateBulkButtonLabel();
-              await loadPlaceOptions();
+              await waitForAuthOperation(loadPlaceOptions(), operation);
               lastVisible = null;
-              await loadItems(true);
+              await waitForAuthOperation(loadItems(true), operation);
             } catch (err) {
+              if (!isCurrentAuthOperation(operation)) return;
               console.error("개인정보 동의 기록 저장 오류:", err);
               alert("동의 기록을 저장하지 못했습니다. 배포된 Firestore 보안 규칙과 연결 상태를 확인해 주세요.");
               loginBtn.disabled = !(privacyConsent && privacyConsent.checked);
@@ -2139,7 +2174,7 @@ const firebaseConfig = {
         list.sort((a, b) => {
           const aKey = (a.foundTime || a.createdAt || "");
           const bKey = (b.foundTime || b.createdAt || "");
-          return (bKey).localeCompare(aKey);
+          return (bKey).localeCompare(aKey) || a.id.localeCompare(b.id);
         });
 
         if (filterText.trim()) {
@@ -2177,7 +2212,7 @@ const firebaseConfig = {
               : DEFAULT_EMPTY_MESSAGE;
             emptyMessage.style.display = "block";
           }
-          if (loadMoreBtn) loadMoreBtn.style.display = "none";
+          if (loadMoreBtn) loadMoreBtn.style.display = hasMoreManagementItems ? "block" : "none";
           updateBulkButtonsState();
           return;
         } else {
@@ -2185,9 +2220,10 @@ const firebaseConfig = {
         }
 
         const totalMatches = list.length;
-        list = list.slice(0, displayCount);
+        const isUnfilteredManagementList = currentCategory === "전체" && !filterText.trim();
+        if (isUnfilteredManagementList) list = list.slice(0, displayCount);
         if (loadMoreBtn) {
-          loadMoreBtn.style.display = displayCount < totalMatches ? "block" : "none";
+          loadMoreBtn.style.display = (isUnfilteredManagementList && displayCount < totalMatches) || hasMoreManagementItems ? "block" : "none";
         }
 
         list.forEach((item) => {
@@ -2614,6 +2650,9 @@ const firebaseConfig = {
 
       if (lostItemForm) {
         lostItemForm.addEventListener("submit", async (e) => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           e.preventDefault();
           if (!isTeacher || !currentUser) {
             alert("관리자가 허용한 교직원 계정으로 로그인한 뒤 등록할 수 있습니다.");
@@ -2671,16 +2710,16 @@ const firebaseConfig = {
           }
 
           try {
-            const storedSnapshot = await db.collection("lost_items")
+            const storedSnapshot = await waitForAuthOperation(db.collection("lost_items")
               .where("status", "in", statusStorageValues("stored"))
-              .limit(MAX_STORED_MANAGEMENT_ITEMS)
-              .get();
-            if (storedSnapshot.size >= MAX_STORED_MANAGEMENT_ITEMS) {
+            .limit(MAX_STORED_REGISTRATION_ITEMS)
+              .get(), sessionOperation);
+          if (storedSnapshot.size >= MAX_STORED_REGISTRATION_ITEMS) {
               alert("보관 중 분실물이 60개에 도달해 새 물품을 등록할 수 없습니다. 기존 물품을 먼저 정리해 주세요.");
               return;
             }
             const file = imageInput.files[0];
-            const imageDataUrl = await prepareImageDataUrl(file);
+            const imageDataUrl = await waitForAuthOperation(prepareImageDataUrl(file), sessionOperation);
 
             let foundTimeTs = null;
             if (foundTimeVal) {
@@ -2709,16 +2748,20 @@ const firebaseConfig = {
               db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(lostItemRef.id),
               createPublicLostItemPayload(itemPayload)
             );
-            await batch.commit();
+            await waitForAuthOperation(batch.commit(), sessionOperation);
 
             lostItemForm.reset();
             alert("분실물이 등록되었습니다.");
             lastVisible = null;
-            await loadItems(true);
+            await waitForAuthOperation(loadItems(true), sessionOperation);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             console.error("등록 오류:", err);
             alert(err && err.message ? err.message : "분실물 등록 중 오류가 발생했습니다.");
           } finally {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             if (submitBtn) {
               submitBtn.disabled = !isTeacher;
               submitBtn.textContent = originalText;
@@ -2729,6 +2772,9 @@ const firebaseConfig = {
 
       if (ownerDoneBtn) {
         ownerDoneBtn.addEventListener("click", async () => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           if (!currentModalItemId) return;
           if (!isTeacher || !currentUser) {
             alert("관리자가 허용한 교직원 계정으로 로그인해야 합니다.");
@@ -2743,22 +2789,25 @@ const firebaseConfig = {
           try {
             recipientInfo = normalizeRecipientInfo(info);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             alert(err.message);
             return;
           }
 
           try {
-            await db.collection("lost_items").doc(item.id).update({
+            await waitForAuthOperation(updateLostItemAndPublic(item.id, {
               status: "found",
               ownerInfo: recipientInfo,
               statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            await syncPublicLostItem(item.id);
+            }), sessionOperation);
             alert("주인 찾기 완료로 처리되었습니다.");
             closeModal();
             lastVisible = null;
-            await loadItems(true);
+            await waitForAuthOperation(loadItems(true), sessionOperation);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             console.error("주인 찾기 변경 오류:", err);
             alert("상태 변경 중 오류가 발생했습니다.");
           }
@@ -2767,6 +2816,9 @@ const firebaseConfig = {
 
       if (discardBtn) {
         discardBtn.addEventListener("click", async () => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           if (!currentModalItemId) return;
           if (!isTeacher || !currentUser) {
             alert("관리자가 허용한 교직원 계정으로 로그인해야 합니다.");
@@ -2783,16 +2835,17 @@ const firebaseConfig = {
           if (!ok) return;
 
           try {
-            await db.collection("lost_items").doc(item.id).update({
+            await waitForAuthOperation(updateLostItemAndPublic(item.id, {
               status: "discarded",
               statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            await syncPublicLostItem(item.id);
+            }), sessionOperation);
             alert("해당 물품이 폐기 완료 상태로 변경되었습니다.");
             closeModal();
             lastVisible = null;
-            await loadItems(true);
+            await waitForAuthOperation(loadItems(true), sessionOperation);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             console.error("폐기 처리 오류:", err);
             alert("폐기 처리 중 오류가 발생했습니다.");
           }
@@ -2801,6 +2854,9 @@ const firebaseConfig = {
 
       if (editBtn) {
         editBtn.addEventListener("click", async () => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           if (!currentModalItemId) return;
           const item = items.find((it) => it.id === currentModalItemId);
           if (!item) return;
@@ -2851,13 +2907,14 @@ const firebaseConfig = {
           }
 
           try {
-            await db.collection("lost_items").doc(item.id).update(updates);
-            await syncPublicLostItem(item.id);
+            await waitForAuthOperation(updateLostItemAndPublic(item.id, updates), sessionOperation);
             alert("분실물 정보가 수정되었습니다.");
             closeModal();
             lastVisible = null;
-            await loadItems(true);
+            await waitForAuthOperation(loadItems(true), sessionOperation);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             console.error("수정 오류:", err);
             alert("수정 중 오류가 발생했습니다.");
           }
@@ -2866,6 +2923,9 @@ const firebaseConfig = {
 
       if (reRegisterBtn) {
         reRegisterBtn.addEventListener("click", async () => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           if (!currentModalItemId) return;
           if (!isTeacher || !currentUser) {
             alert("관리자가 허용한 교직원 계정으로 로그인해야 합니다.");
@@ -2879,7 +2939,7 @@ const firebaseConfig = {
           if (!ok) return;
 
           try {
-            await db.collection("lost_items").doc(item.id).update({
+            await waitForAuthOperation(updateLostItemAndPublic(item.id, {
               status: "stored",
               ownerInfo: "",
               statusUpdatedAt: firebase.firestore.FieldValue.delete(),
@@ -2887,13 +2947,14 @@ const firebaseConfig = {
               deletedBy: firebase.firestore.FieldValue.delete(),
               restoredAt: firebase.firestore.FieldValue.serverTimestamp(),
               restoredBy: normalizeEmail(currentUser.email)
-            });
-            await syncPublicLostItem(item.id);
+            }), sessionOperation);
             alert("물품이 다시 '보관 중' 상태로 변경되었습니다.");
             closeModal();
             lastVisible = null;
-            await loadItems(true);
+            await waitForAuthOperation(loadItems(true), sessionOperation);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             console.error("재등록 오류:", err);
             alert("재등록 중 오류가 발생했습니다.");
           }
@@ -2903,6 +2964,9 @@ const firebaseConfig = {
 
       if (deleteBtn) {
         deleteBtn.addEventListener("click", async () => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           if (!currentModalItemId) return;
           if (!isTeacher || !currentUser) {
             alert("관리자가 허용한 교직원 계정으로 로그인해야 합니다.");
@@ -2921,24 +2985,22 @@ const firebaseConfig = {
 
           try {
             if (isPermanent) {
-              await db.collection("lost_items").doc(item.id).delete();
-              await db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(item.id).delete().catch((err) => {
-                if (err && err.code !== "not-found") throw err;
-              });
+              await waitForAuthOperation(deleteLostItemAndPublic(item.id), sessionOperation);
               alert("해당 분실물이 영구 삭제되었습니다.");
             } else {
-              await db.collection("lost_items").doc(item.id).update({
+              await waitForAuthOperation(updateLostItemAndPublic(item.id, {
                 status: "deleted",
                 deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 deletedBy: normalizeEmail(currentUser.email)
-              });
-              await syncPublicLostItem(item.id);
+              }), sessionOperation);
               alert("해당 분실물이 휴지통으로 이동되었습니다.");
             }
             closeModal();
             lastVisible = null;
-            await loadItems(true);
+            await waitForAuthOperation(loadItems(true), sessionOperation);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             console.error("삭제 오류:", err);
             alert("분실물 삭제 중 오류가 발생했습니다.");
           }
@@ -2947,6 +3009,9 @@ const firebaseConfig = {
 
       if (bulkFoundBtn) {
         bulkFoundBtn.addEventListener("click", async () => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           if (!isTeacher || !currentUser) {
             alert("관리자가 허용한 교직원 계정으로 로그인해야 합니다.");
             return;
@@ -2972,7 +3037,7 @@ const firebaseConfig = {
 
             try {
               for (const id of targetIds) {
-                await db.collection("lost_items").doc(id).update({
+                await waitForAuthOperation(updateLostItemAndPublic(id, {
                   status: "stored",
                   ownerInfo: "",
                   statusUpdatedAt: firebase.firestore.FieldValue.delete(),
@@ -2980,13 +3045,14 @@ const firebaseConfig = {
                   deletedBy: firebase.firestore.FieldValue.delete(),
                   restoredAt: firebase.firestore.FieldValue.serverTimestamp(),
                   restoredBy: normalizeEmail(currentUser.email)
-                });
-                await syncPublicLostItem(id);
+                }), sessionOperation);
               }
               alert(`선택한 ${targetIds.length}개의 분실물이 다시 '보관 중' 상태로 재등록되었습니다.`);
               lastVisible = null;
-              await loadItems(true);
+              await waitForAuthOperation(loadItems(true), sessionOperation);
             } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
               console.error("일괄 재등록 처리 오류:", err);
               alert("일괄 재등록 처리 중 오류가 발생했습니다.");
             }
@@ -3009,6 +3075,8 @@ const firebaseConfig = {
             try {
               recipientInfo = normalizeRecipientInfo(ownerInfo);
             } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
               alert(err.message);
               return;
             }
@@ -3018,17 +3086,18 @@ const firebaseConfig = {
 
             try {
               for (const id of targetIds) {
-                await db.collection("lost_items").doc(id).update({
+                await waitForAuthOperation(updateLostItemAndPublic(id, {
                   status: "found",
                   ownerInfo: recipientInfo,
                   statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                await syncPublicLostItem(id);
+                }), sessionOperation);
               }
               alert(`선택한 ${targetIds.length}개의 분실물이 '주인 찾음'으로 처리되었습니다.`);
               lastVisible = null;
-              await loadItems(true);
+              await waitForAuthOperation(loadItems(true), sessionOperation);
             } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
               console.error("일괄 주인 찾기 처리 오류:", err);
               alert("일괄 주인 찾기 처리 중 오류가 발생했습니다.");
             }
@@ -3038,6 +3107,9 @@ const firebaseConfig = {
 
       if (bulkDeleteBtn) {
         bulkDeleteBtn.addEventListener("click", async () => {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
           if (!isTeacher || !currentUser) {
             alert("관리자가 허용한 교직원 계정으로 로그인해야 합니다.");
             return;
@@ -3058,51 +3130,60 @@ const firebaseConfig = {
           try {
             if (isPermanent) {
               for (const id of targetIds) {
-                await db.collection("lost_items").doc(id).delete();
-                await db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id).delete().catch((err) => {
-                  if (err && err.code !== "not-found") throw err;
-                });
+                await waitForAuthOperation(deleteLostItemAndPublic(id), sessionOperation);
               }
               alert(`선택한 ${targetIds.length}개의 분실물이 영구 삭제되었습니다.`);
             } else {
               for (const id of targetIds) {
-                await db.collection("lost_items").doc(id).update({
+                await waitForAuthOperation(updateLostItemAndPublic(id, {
                   status: "deleted",
                   deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
                   deletedBy: normalizeEmail(currentUser.email)
-                });
-                await syncPublicLostItem(id);
+                }), sessionOperation);
               }
               alert(`선택한 ${targetIds.length}개의 분실물이 휴지통으로 이동되었습니다.`);
             }
             lastVisible = null;
-            await loadItems(true);
+            await waitForAuthOperation(loadItems(true), sessionOperation);
           } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
             console.error("일괄 삭제 처리 오류:", err);
             alert("일괄 삭제 처리 중 오류가 발생했습니다.");
           }
         });
       }
 
-      async function loadItems(isInitial = false) {
-        if (isLoading) return;
+      async function loadItems(isInitial = false, append = false) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
+        if (append && isLoading) return;
         isLoading = true;
+        const requestToken = NSMissingPagination.beginRequest();
+        const statusGroup = statusGroupForCategory(currentCategory);
+        if (!append) {
+          lastVisible = null;
+          hasMoreManagementItems = true;
+          items = [];
+          selectedIds.clear();
+          loadedStatusGroup = statusGroup;
+        }
         if (emptyMessage) {
           emptyMessage.textContent = "분실물 목록을 불러오는 중입니다.";
           emptyMessage.style.display = "block";
         }
         try {
-          const statusGroup = statusGroupForCategory(currentCategory);
-          const itemLimit = statusGroup === "stored"
-            ? MAX_STORED_MANAGEMENT_ITEMS
-            : MAX_STATUS_MANAGEMENT_ITEMS;
           const query = db.collection("lost_items")
-            .where("status", "in", statusStorageValues(statusGroup))
-            .limit(itemLimit);
-          const snapshot = await query.get();
-          items = [];
-          selectedIds.clear();
-          loadedStatusGroup = statusGroup;
+            .where("status", "in", statusStorageValues(statusGroup));
+          const page = await waitForAuthOperation(NSMissingPagination.fetchPage(
+            query, append ? lastVisible : null, MANAGEMENT_FETCH_PAGE_SIZE,
+            firebase.firestore.FieldPath.documentId()
+          ), sessionOperation);
+          if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
+          const snapshot = { docs: page.docs, empty: page.docs.length === 0 };
+          lastVisible = page.cursor;
+          hasMoreManagementItems = page.hasMore;
           if (isInitial) displayCount = FIRST_PAGE_SIZE;
 
           const toTrash = [];
@@ -3133,7 +3214,7 @@ const firebaseConfig = {
                 }
               }
 
-              items.push({
+              if (!items.some((item) => item.id === doc.id)) items.push({
                 id: doc.id,
                 title: data.title || "",
                 category: data.category || "기타",
@@ -3155,34 +3236,46 @@ const firebaseConfig = {
           // 오래된 항목은 바로 삭제하지 않고 휴지통으로 이동
           if (toTrash.length) {
             try {
-              await Promise.all(
+              await waitForAuthOperation(Promise.all(
                 toTrash.map(async (id) => {
-                  await db.collection("lost_items").doc(id).update({
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
+                  await waitForAuthOperation(updateLostItemAndPublic(id, {
                     status: "deleted",
                     deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     deletedBy: "auto-cleanup"
-                  });
-                  await syncPublicLostItem(id);
+                  }), sessionOperation);
                 })
-              );
+              ), sessionOperation);
             } catch (delErr) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
               console.error("자동 휴지통 이동 처리 중 오류:", delErr);
             }
           }
+          if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
           if (toNormalize.length) {
             try {
-              await Promise.all(
+              await waitForAuthOperation(Promise.all(
                 toNormalize.map(async (item) => {
-                  await db.collection("lost_items").doc(item.id).update({ status: item.status });
-                  await syncPublicLostItem(item.id);
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
+                  await waitForAuthOperation(updateLostItemAndPublic(item.id, { status: item.status }), sessionOperation);
                 })
-              );
+              ), sessionOperation);
             } catch (normalizeErr) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
               console.error("기존 상태값 정리 중 오류:", normalizeErr);
             }
           }
           renderItems(searchInput ? searchInput.value : "");
         } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
+          if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
           console.error("분실물 불러오기 오류:", err);
           if (emptyMessage) {
             emptyMessage.textContent = err && err.code === "permission-denied"
@@ -3191,14 +3284,26 @@ const firebaseConfig = {
             emptyMessage.style.display = "block";
           }
         } finally {
-          isLoading = false;
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
+          if (NSMissingPagination.isCurrentRequest(requestToken)) isLoading = false;
         }
       }
 
       if (loadMoreBtn) {
-        loadMoreBtn.addEventListener("click", () => {
+        loadMoreBtn.addEventListener("click", async () => {
+          const hasRefinement = currentCategory !== "전체" || (searchInput && searchInput.value.trim());
+          if (hasRefinement) {
+            await loadItems(false, true);
+            return;
+          }
+          if (displayCount < items.length) {
+            displayCount = Math.min(displayCount + PAGE_SIZE, items.length);
+            renderItems(searchInput ? searchInput.value : "");
+            return;
+          }
           displayCount += PAGE_SIZE;
-          renderItems(searchInput ? searchInput.value : "");
+          await loadItems(false, true);
         });
       }
 

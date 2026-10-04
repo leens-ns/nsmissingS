@@ -1,4 +1,4 @@
-const CACHE_NAME = "nsmissing-app-v11";
+const CACHE_NAME = "nsmissing-app-v15";
 const SHELL_FILES = [
   "./student/",
   "./student/index.html",
@@ -6,6 +6,7 @@ const SHELL_FILES = [
   "./teacher/",
   "./teacher/index.html",
   "./teacher/manifest.webmanifest",
+  "./cursor-pagination.js",
   "./privacy-policy.html",
   "./school-logo.png",
   "./app-icon.svg",
@@ -23,19 +24,28 @@ const RETIRED_PATHS = new Set([
 ]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES)).catch(() => undefined)
-  );
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.addAll(SHELL_FILES);
+      await self.skipWaiting();
+    } catch (error) {
+      // A failed update must leave the previous worker and usable cache intact.
+      await caches.delete(CACHE_NAME).catch(() => {});
+      throw error;
+    }
+  })());
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const shell = await Promise.all(SHELL_FILES.map(file => cache.match(file)));
+    if (shell.some(response => !response)) throw new Error("Incomplete application shell; old caches preserved");
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key.startsWith("nsmissing-app-") && key !== CACHE_NAME).map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("fetch", (event) => {
