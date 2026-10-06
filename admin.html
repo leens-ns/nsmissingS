@@ -776,6 +776,7 @@
               <option value="stored">보관 중</option>
             </select>
             <button id="loadCleanupItemsBtn" class="btn btn-outline" type="button">대상 불러오기</button>
+            <button id="loadMoreCleanupItemsBtn" class="btn btn-outline" type="button" style="display:none">더 불러오기</button>
             <button id="selectAllCleanupItemsBtn" class="btn btn-muted" type="button">전체 선택</button>
             <button id="deleteSelectedItemsBtn" class="btn btn-danger" type="button" disabled>선택 항목 정리</button>
             </div>
@@ -795,10 +796,11 @@
           <details class="folded-help">
             <summary>정리 기준 보기</summary>
             <ul>
-              <li>상태를 선택한 뒤 대상 불러오기를 누르면 목록이 표시됩니다.</li>
+              <li>상태를 선택한 뒤 대상 불러오기를 누르면 목록이 표시됩니다. 더 불러오기를 눌러 다음 페이지를 이어 볼 수 있습니다.</li>
+              <li>전체 선택은 현재 불러온 페이지에만 적용됩니다. 다른 페이지 항목도 정리하려면 페이지마다 선택하거나 불러온 뒤 전체 선택을 누르세요.</li>
               <li>일반 항목은 휴지통으로 이동되고, 휴지통 상태에서만 영구 삭제됩니다.</li>
               <li>주인 찾음·폐기 완료 항목은 처리 후 7일이 지나고 교직원용 화면에서 해당 상태 목록을 불러오면 휴지통으로 이동합니다.</li>
-              <li>정리 목록은 선택한 상태의 항목을 최대 100개까지 표시합니다.</li>
+              <li>정리 목록은 선택한 상태에서 100개씩 이어 불러옵니다. 전체 선택은 현재 불러온 항목에 적용됩니다.</li>
               <li>학생/학부모용 조회 누락을 막기 위해 보관 중 물품은 최대 60개까지만 등록됩니다.</li>
             </ul>
           </details>
@@ -833,6 +835,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="./cursor-pagination.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDyp8MRjZUwZZxBMUZBDpCqYac2TaMIO5M",
@@ -863,6 +866,18 @@
     const DEFAULT_FOUND_PLACES = ["운동장", "강당", "급식실", "복도", "교실", "도서관"];
 
     let currentUser = null;
+    let authGeneration = 0;
+    function captureAuthOperation() { return currentUser ? {user:currentUser, uid:currentUser.uid, generation:authGeneration} : null; }
+    function isCurrentAuthOperation(operation) { return !!operation && operation.user === currentUser && operation.uid === currentUser?.uid && operation.generation === authGeneration; }
+    async function waitForAuthOperation(promise, operation) { const result = await promise; if (!isCurrentAuthOperation(operation)) throw new Error("AUTH_OPERATION_STALE"); return result; }
+    function clearAdminSessionView() {
+      NSMissingPagination.invalidateRequests();
+      cleanupItems = []; selectedCleanupIds.clear(); cleanupLastVisible = null;
+      cleanupHasMore = false; cleanupIsLoading = false; authorizedUsersCache = [];
+      cleanupItemsList.innerHTML = "<div class='empty-message'>관리자 로그인 후 사용할 수 있습니다.</div>";
+      authorizedUsersList.innerHTML = ""; storagePlacesList.innerHTML = ""; foundPlacesList.innerHTML = "";
+      if (loadMoreCleanupItemsBtn) loadMoreCleanupItemsBtn.style.display = "none";
+    }
     let currentAuthorizedRole = "";
     let hasPrivacyConsent = false;
     let isAdmin = false;
@@ -879,6 +894,7 @@
     const cleanupItemsList = document.getElementById("cleanupItemsList");
     const cleanupStatusFilter = document.getElementById("cleanupStatusFilter");
     const loadCleanupItemsBtn = document.getElementById("loadCleanupItemsBtn");
+    const loadMoreCleanupItemsBtn = document.getElementById("loadMoreCleanupItemsBtn");
     const selectAllCleanupItemsBtn = document.getElementById("selectAllCleanupItemsBtn");
     const deleteSelectedItemsBtn = document.getElementById("deleteSelectedItemsBtn");
     const syncPublicItemsBtn = document.getElementById("syncPublicItemsBtn");
@@ -888,6 +904,9 @@
     const foundPlacesList = document.getElementById("foundPlacesList");
 
     let cleanupItems = [];
+    let cleanupLastVisible = null;
+    let cleanupHasMore = false;
+    let cleanupIsLoading = false;
     let selectedCleanupIds = new Set();
     let authorizedUsersCache = [];
     let storagePlaceOptions = DEFAULT_STORAGE_LOCATIONS.slice();
@@ -1078,108 +1097,40 @@
     }
 
     async function syncPublicLostItems() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) throw new Error("관리자 로그인 후 사용할 수 있습니다.");
-      const snapshot = await db.collection("lost_items").get();
-      const sourceIds = new Set(snapshot.docs.map((doc) => doc.id));
-      let batch = db.batch();
-      let writes = 0;
-      let synced = 0;
-      let removed = 0;
-      let normalized = 0;
-      let migrated = 0;
-      const commitBatch = async () => {
-        if (!writes) return;
-        await batch.commit();
-        batch = db.batch();
-        writes = 0;
-      };
-      for (const doc of snapshot.docs) {
-        const sourceData = doc.data() || {};
-        const normalizedStatus = normalizeLostItemStatus(sourceData.status);
-        const sourceUpdates = {};
-        const normalizedSourceData = { ...sourceData };
-        if (sourceData.status !== normalizedStatus) {
-          sourceUpdates.status = normalizedStatus;
-          normalizedSourceData.status = normalizedStatus;
-        }
-        if (!sourceData.createdAt && sourceData.foundTime) {
-          sourceUpdates.createdAt = sourceData.foundTime;
-          normalizedSourceData.createdAt = sourceData.foundTime;
-        }
-        const hasLegacyImage = !!(sourceData.imageDataUrl || sourceData.imageUrl);
-        if (hasLegacyImage) {
-          sourceUpdates.imageDataUrl = firebase.firestore.FieldValue.delete();
-          sourceUpdates.imageUrl = firebase.firestore.FieldValue.delete();
-          migrated += 1;
-        }
-        if (Object.keys(sourceUpdates).length) {
-          batch.update(doc.ref, sourceUpdates);
-          if (sourceData.status !== normalizedStatus || (!sourceData.createdAt && sourceData.foundTime)) {
-            normalized += 1;
-          }
-          writes += 1;
-        }
-        const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(doc.id);
-        const summaryRef = db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(doc.id);
-        const imageRef = db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(doc.id);
-        const managementSummaryRef = db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(doc.id);
-        const managementImageRef = db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(doc.id);
-        const publicSourceData = normalizedSourceData;
-        const publicData = createPublicLostItemPayload(publicSourceData);
-        batch.set(managementSummaryRef, createManagementLostItemSummaryPayload(publicSourceData));
-        writes += 1;
-        if (hasLegacyImage) {
-          batch.set(managementImageRef, createManagementLostItemImagePayload(publicSourceData));
-          writes += 1;
-        }
-        if (publicData) {
-          batch.set(publicRef, publicData);
-          batch.set(summaryRef, createPublicLostItemSummaryPayload(publicSourceData));
-          batch.set(imageRef, createPublicLostItemImagePayload(publicSourceData));
-          synced += 1;
-          writes += 3;
-        } else {
-          batch.delete(publicRef);
-          batch.delete(summaryRef);
-          batch.delete(imageRef);
-          writes += 3;
-        }
-        if (writes >= 400) await commitBatch();
+      const sourceSnapshot = await waitForAuthOperation(db.collection("lost_items").get(), sessionOperation);
+      const publicSnapshot = await waitForAuthOperation(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).get(), sessionOperation);
+      const ids = new Set([...sourceSnapshot.docs, ...publicSnapshot.docs].map(item => item.id));
+      let synced = 0, removed = 0, normalized = 0;
+      for (const id of ids) {
+        const sourceRef = db.collection("lost_items").doc(id);
+        const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id);
+        const result = await waitForAuthOperation(db.runTransaction(async transaction => {
+          const current = await transaction.get(sourceRef);
+          if (!current.exists) { transaction.delete(publicRef); return {removed:1}; }
+          const data = current.data() || {}, updates = {};
+          const status = normalizeLostItemStatus(data.status);
+          if (data.status !== status) updates.status = status;
+          if (!data.createdAt && data.foundTime) updates.createdAt = data.foundTime;
+          if (Object.keys(updates).length) transaction.update(sourceRef, updates);
+          const projection = createPublicLostItemPayload({...data, ...updates});
+          if (projection) transaction.set(publicRef, projection); else transaction.delete(publicRef);
+          return {synced:projection ? 1 : 0, normalized:Object.keys(updates).length ? 1 : 0};
+        }), sessionOperation);
+        synced += result.synced || 0; removed += result.removed || 0; normalized += result.normalized || 0;
       }
-      const [publicSnapshot, publicSummarySnapshot, publicImageSnapshot, managementSummarySnapshot, managementImageSnapshot] = await Promise.all([
-        db.collection(PUBLIC_LOST_ITEMS_COLLECTION).get(),
-        db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).get(),
-        db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).get(),
-        db.collection(LOST_ITEM_SUMMARIES_COLLECTION).get(),
-        db.collection(LOST_ITEM_IMAGES_COLLECTION).get()
-      ]);
-      const staleIds = new Set([
-        ...publicSnapshot.docs.map((doc) => doc.id),
-        ...publicSummarySnapshot.docs.map((doc) => doc.id),
-        ...publicImageSnapshot.docs.map((doc) => doc.id),
-        ...managementSummarySnapshot.docs.map((doc) => doc.id),
-        ...managementImageSnapshot.docs.map((doc) => doc.id)
-      ]);
-      for (const id of staleIds) {
-        if (sourceIds.has(id)) continue;
-        [
-          db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id),
-          db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(id),
-          db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(id),
-          db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(id),
-          db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(id)
-        ].forEach((ref) => batch.delete(ref));
-        removed += 1;
-        writes += 5;
-        if (writes >= 400) await commitBatch();
-      }
-      await commitBatch();
-      return { total: snapshot.size, synced, removed, normalized, migrated };
+      return {total:sourceSnapshot.size, synced, removed, normalized};
     }
     async function getAuthorizedUser(email) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       const normalized = normalizeEmail(email);
       if (isBootstrapAdmin(normalized)) return { email: normalized, role: "admin", active: true };
-      const doc = await db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).get();
+      const doc = await waitForAuthOperation(db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).get(), sessionOperation);
       if (!doc.exists) return null;
       const data = doc.data() || {};
       if (data.active !== true) return null;
@@ -1190,24 +1141,30 @@
       };
     }
     async function hasCurrentPrivacyConsent(email) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       const normalized = normalizeEmail(email);
       if (!normalized) return false;
-      const doc = await db.collection(PRIVACY_CONSENTS_COLLECTION).doc(normalized).get();
+      const doc = await waitForAuthOperation(db.collection(PRIVACY_CONSENTS_COLLECTION).doc(normalized).get(), sessionOperation);
       if (!doc.exists) return false;
       const data = doc.data() || {};
       return data.consentGiven === true && data.policyVersion === PRIVACY_POLICY_VERSION;
     }
     async function saveCurrentPrivacyConsent() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       const email = normalizeEmail(currentUser && currentUser.email);
       if (!email || currentAuthorizedRole !== "admin") {
         throw new Error("허용된 관리자 계정을 확인할 수 없습니다.");
       }
-      await db.collection(PRIVACY_CONSENTS_COLLECTION).doc(email).set({
+      await waitForAuthOperation(db.collection(PRIVACY_CONSENTS_COLLECTION).doc(email).set({
         email,
         consentGiven: true,
         policyVersion: PRIVACY_POLICY_VERSION,
         consentedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }), sessionOperation);
     }
     function setAuthUI() {
       const needsConsent = !!(currentUser && currentAuthorizedRole === "admin" && !hasPrivacyConsent);
@@ -1278,13 +1235,18 @@
       renderPlaceList(foundPlacesList, foundPlaceOptions, "found");
     }
     async function loadPlaceOptionsAdmin() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin) return;
       try {
-        const doc = await db.collection(APP_SETTINGS_COLLECTION).doc(PLACE_OPTIONS_DOC).get();
+        const doc = await waitForAuthOperation(db.collection(APP_SETTINGS_COLLECTION).doc(PLACE_OPTIONS_DOC).get(), sessionOperation);
         const data = doc.exists ? (doc.data() || {}) : {};
         storagePlaceOptions = normalizeOptionList(data.storageLocations, DEFAULT_STORAGE_LOCATIONS);
         foundPlaceOptions = normalizeOptionList(data.foundPlaces, DEFAULT_FOUND_PLACES);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("장소 목록 불러오기 오류:", err);
         storagePlaceOptions = DEFAULT_STORAGE_LOCATIONS.slice();
         foundPlaceOptions = DEFAULT_FOUND_PLACES.slice();
@@ -1292,19 +1254,25 @@
       renderPlaceOptions();
     }
     async function savePlaceOptionsAdmin() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) {
         alert("관리자 로그인 후 사용할 수 있습니다.");
         return;
       }
-      await db.collection(APP_SETTINGS_COLLECTION).doc(PLACE_OPTIONS_DOC).set({
+      await waitForAuthOperation(db.collection(APP_SETTINGS_COLLECTION).doc(PLACE_OPTIONS_DOC).set({
         storageLocations: storagePlaceOptions,
         foundPlaces: foundPlaceOptions,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: normalizeEmail(currentUser.email)
-      }, { merge: true });
+      }, { merge: true }), sessionOperation);
       renderPlaceOptions();
     }
     async function addPlaceOption(type) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) {
         alert("관리자 로그인 후 사용할 수 있습니다.");
         return;
@@ -1331,9 +1299,11 @@
       const previous = list.slice();
       list.push(value);
       try {
-        await savePlaceOptionsAdmin();
+        await waitForAuthOperation(savePlaceOptionsAdmin(), sessionOperation);
         if (input) input.value = "";
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         if (type === "storage") storagePlaceOptions = previous;
         else foundPlaceOptions = previous;
         renderPlaceOptions();
@@ -1342,6 +1312,9 @@
       }
     }
     async function removePlaceOption(type, value) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) {
         alert("관리자 로그인 후 사용할 수 있습니다.");
         return;
@@ -1354,8 +1327,10 @@
         foundPlaceOptions = foundPlaceOptions.filter((item) => item !== value);
       }
       try {
-        await savePlaceOptionsAdmin();
+        await waitForAuthOperation(savePlaceOptionsAdmin(), sessionOperation);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         if (type === "storage") storagePlaceOptions = previous;
         else foundPlaceOptions = previous;
         renderPlaceOptions();
@@ -1383,6 +1358,7 @@
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.value = item.id;
+        checkbox.checked = selectedCleanupIds.has(item.id);
         checkbox.addEventListener("change", () => {
           if (checkbox.checked) {
             selectedCleanupIds.add(item.id);
@@ -1415,38 +1391,68 @@
         cleanupItemsList.appendChild(row);
       });
     }
-    async function loadCleanupItems() {
+    async function loadCleanupItems(append = false) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) {
         alert("관리자 로그인 후 사용할 수 있습니다.");
         return;
       }
-      cleanupItemsList.innerHTML = "<div class='empty-message'>정리 대상을 불러오는 중입니다.</div>";
-      selectedCleanupIds.clear();
-      updateCleanupDeleteState();
+      // Event listeners pass an Event object; only an explicit boolean requests
+      // the next page. This also keeps accidental callback arguments harmless.
+      append = append === true;
+      if (append && cleanupIsLoading) return;
+      const requestToken = NSMissingPagination.beginRequest();
+      cleanupIsLoading = true;
       const filter = cleanupStatusFilter ? cleanupStatusFilter.value : "found";
+      if (!append) {
+        cleanupLastVisible = null;
+        cleanupHasMore = true;
+        cleanupItems = [];
+        selectedCleanupIds.clear();
+        cleanupItemsList.innerHTML = "<div class='empty-message'>정리 대상을 불러오는 중입니다.</div>";
+      }
+      updateCleanupDeleteState();
       try {
         let query = db.collection("lost_items");
         if (filter === "all") {
-          query = query.limit(100);
+          // Use document ID ordering so existing records without createdAt are not skipped.
         } else {
-          query = query.where("status", "in", [filter, statusLabel(filter)]).limit(100);
+          query = query.where("status", "in", [filter, statusLabel(filter)]);
         }
-        const snapshot = await query.get();
-        cleanupItems = snapshot.docs
+        const page = await waitForAuthOperation(NSMissingPagination.fetchPage(
+          query, append ? cleanupLastVisible : null, 100, firebase.firestore.FieldPath.documentId()
+        ), sessionOperation);
+        if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
+        cleanupLastVisible = page.cursor;
+        cleanupHasMore = page.hasMore;
+        const incomingItems = page.docs
           .map((doc) => {
             const data = doc.data() || {};
             return { id: doc.id, ...data, status: normalizeLostItemStatus(data.status) };
           })
-          .filter((item) => filter === "all" || item.status === filter)
-          .sort((a, b) => {
-            const aDate = normalizeTs(a.createdAt) || normalizeTs(a.foundTime);
-            const bDate = normalizeTs(b.createdAt) || normalizeTs(b.foundTime);
-            return bDate.localeCompare(aDate);
-          });
+          .filter((item) => filter === "all" || item.status === filter);
+        if (!append) cleanupItems = [];
+        const existingIds = new Set(cleanupItems.map((item) => item.id));
+        incomingItems.forEach((item) => { if (!existingIds.has(item.id)) cleanupItems.push(item); });
+        cleanupItems.sort((a, b) => {
+          const aDate = normalizeTs(a.createdAt) || normalizeTs(a.foundTime) || "";
+          const bDate = normalizeTs(b.createdAt) || normalizeTs(b.foundTime) || "";
+          return bDate.localeCompare(aDate) || a.id.localeCompare(b.id);
+        });
         renderCleanupItems();
+        if (loadMoreCleanupItemsBtn) loadMoreCleanupItemsBtn.style.display = cleanupHasMore ? "inline-flex" : "none";
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
+        if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
         console.error("정리 대상 불러오기 오류:", err);
         cleanupItemsList.innerHTML = "<div class='empty-message'>정리 대상을 불러오지 못했습니다. 권한과 Firestore 규칙을 확인해 주세요.</div>";
+      } finally {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
+        if (NSMissingPagination.isCurrentRequest(requestToken)) cleanupIsLoading = false;
       }
     }
     function selectAllCleanupItems() {
@@ -1458,6 +1464,9 @@
       updateCleanupDeleteState();
     }
     async function deleteSelectedCleanupItems() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) {
         alert("관리자 로그인 후 사용할 수 있습니다.");
         return;
@@ -1477,34 +1486,41 @@
       try {
         if (isPermanent) {
           for (const id of targetIds) {
-            await db.collection("lost_items").doc(id).delete();
-            await deletePublicLostItemData(id);
-            await deleteManagementLostItemData(id);
+            const batch = db.batch();
+            batch.delete(db.collection("lost_items").doc(id));
+            batch.delete(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id));
+            await waitForAuthOperation(batch.commit(), sessionOperation);
           }
           alert(targetIds.length + "개 분실물을 영구 삭제했습니다.");
         } else {
           for (const id of targetIds) {
-            await db.collection("lost_items").doc(id).update({
+            const batch = db.batch();
+            batch.update(db.collection("lost_items").doc(id), {
               status: "deleted",
               deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
               deletedBy: normalizeEmail(currentUser.email)
             });
-            await deletePublicLostItemData(id);
-            await syncManagementLostItem(id);
+            batch.delete(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id));
+            await waitForAuthOperation(batch.commit(), sessionOperation);
           }
           alert(targetIds.length + "개 분실물을 휴지통으로 이동했습니다.");
         }
-        await loadCleanupItems();
+        await waitForAuthOperation(loadCleanupItems(), sessionOperation);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("관리자 일괄 정리 오류:", err);
         alert("분실물 정리 중 오류가 발생했습니다.");
       }
     }
     async function loadAuthorizedUsers() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin) return;
       authorizedUsersList.innerHTML = "<div class='empty-message'>허용 계정 목록을 불러오는 중입니다.</div>";
       try {
-        const snapshot = await db.collection(AUTHORIZED_USERS_COLLECTION).get();
+        const snapshot = await waitForAuthOperation(db.collection(AUTHORIZED_USERS_COLLECTION).get(), sessionOperation);
         const users = snapshot.docs
           .map((doc) => ({ id: doc.id, ...(doc.data() || {}) }))
           .map((user) => isBootstrapAdmin(user.email || user.id)
@@ -1517,6 +1533,8 @@
         authorizedUsersCache = users;
         renderAuthorizedUsers();
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("허용 계정 목록 오류:", err);
         authorizedUsersList.innerHTML = "<div class='empty-message'>목록을 불러오지 못했습니다. Firestore 규칙 배포 상태를 확인해 주세요.</div>";
       }
@@ -1594,6 +1612,9 @@
       });
     }
     async function addAuthorizedUser() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) return;
       const emailInput = document.getElementById("authorizedEmailInput");
       const nameInput = document.getElementById("authorizedNameInput");
@@ -1610,23 +1631,28 @@
         return;
       }
       try {
-        await db.collection(AUTHORIZED_USERS_COLLECTION).doc(email).set({
+        await waitForAuthOperation(db.collection(AUTHORIZED_USERS_COLLECTION).doc(email).set({
           email,
           role,
           name,
           active: true,
           addedBy: normalizeEmail(currentUser.email),
           addedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        }, { merge: true }), sessionOperation);
         emailInput.value = "";
         nameInput.value = "";
-        await loadAuthorizedUsers();
+        await waitForAuthOperation(loadAuthorizedUsers(), sessionOperation);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("허용 계정 추가 오류:", err);
         alert(operationErrorMessage("계정 추가", err));
       }
     }
     async function updateAuthorizedUser(email, updates) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser || isBootstrapAdmin(email)) return;
       const normalized = normalizeEmail(email);
       if (!isValidSchoolEmail(normalized)) {
@@ -1635,16 +1661,18 @@
       }
       const role = updates.role === "admin" ? "admin" : "teacher";
       try {
-        await db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).set({
+        await waitForAuthOperation(db.collection(AUTHORIZED_USERS_COLLECTION).doc(normalized).set({
           email: normalized,
           role,
           name: String(updates.name || "").trim().slice(0, 40),
           active: true,
           updatedBy: normalizeEmail(currentUser.email),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        await loadAuthorizedUsers();
+        }, { merge: true }), sessionOperation);
+        await waitForAuthOperation(loadAuthorizedUsers(), sessionOperation);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("허용 계정 수정 오류:", err);
         alert(operationErrorMessage("계정 수정", err));
       }
@@ -1695,12 +1723,15 @@
       })).filter((row) => row.email);
     }
     async function bulkAddCsvUsers() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) {
         alert("관리자 로그인 후 사용할 수 있습니다.");
         return;
       }
       try {
-        const rows = await readCsvRows();
+        const rows = await waitForAuthOperation(readCsvRows(), sessionOperation);
         const schoolRows = Array.from(new Map(
           rows
             .filter((row) => isValidSchoolEmail(row.email))
@@ -1713,29 +1744,34 @@
         const ok = confirm(schoolRows.length + "개 계정을 허용 목록에 추가하시겠습니까?");
         if (!ok) return;
         for (const row of schoolRows) {
-          await db.collection(AUTHORIZED_USERS_COLLECTION).doc(row.email).set({
+          await waitForAuthOperation(db.collection(AUTHORIZED_USERS_COLLECTION).doc(row.email).set({
             email: row.email,
             role: row.role,
             name: row.name.slice(0, 40),
             active: true,
             addedBy: normalizeEmail(currentUser.email),
             addedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
+          }, { merge: true }), sessionOperation);
         }
         alert(schoolRows.length + "개 계정을 추가했습니다.");
-        await loadAuthorizedUsers();
+        await waitForAuthOperation(loadAuthorizedUsers(), sessionOperation);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("허용 계정 일괄 추가 오류:", err);
         alert(operationErrorMessage("계정 일괄 추가", err));
       }
     }
     async function bulkDeleteCsvUsers() {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || !currentUser) {
         alert("관리자 로그인 후 사용할 수 있습니다.");
         return;
       }
       try {
-        const rows = await readCsvRows();
+        const rows = await waitForAuthOperation(readCsvRows(), sessionOperation);
         const currentEmail = normalizeEmail(currentUser.email);
         const targetRows = Array.from(new Map(
           rows
@@ -1755,10 +1791,12 @@
           batch.delete(db.collection(AUTHORIZED_USERS_COLLECTION).doc(row.email));
           batch.delete(db.collection(PRIVACY_CONSENTS_COLLECTION).doc(row.email));
         }
-        await batch.commit();
+        await waitForAuthOperation(batch.commit(), sessionOperation);
         alert(targetRows.length + "개 계정을 허용 목록에서 삭제했습니다.");
-        await loadAuthorizedUsers();
+        await waitForAuthOperation(loadAuthorizedUsers(), sessionOperation);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("허용 계정 일괄 삭제 오류:", err);
         alert(operationErrorMessage("계정 일괄 삭제", err));
       }
@@ -1776,15 +1814,20 @@
       URL.revokeObjectURL(url);
     }
     async function deleteAuthorizedUser(email) {
+ const sessionOperation = captureAuthOperation();
+ if (!sessionOperation) return;
+
       if (!isAdmin || isBootstrapAdmin(email)) return;
       if (!confirm(email + " 계정을 허용 목록에서 삭제하시겠습니까?\n삭제 즉시 앱 접근이 차단되고 개인정보 처리방침 동의 기록도 함께 삭제됩니다.")) return;
       try {
         const batch = db.batch();
         batch.delete(db.collection(AUTHORIZED_USERS_COLLECTION).doc(email));
         batch.delete(db.collection(PRIVACY_CONSENTS_COLLECTION).doc(email));
-        await batch.commit();
-        await loadAuthorizedUsers();
+        await waitForAuthOperation(batch.commit(), sessionOperation);
+        await waitForAuthOperation(loadAuthorizedUsers(), sessionOperation);
       } catch (err) {
+ if (!isCurrentAuthOperation(sessionOperation)) return;
+
         console.error("허용 계정 삭제 오류:", err);
         alert(operationErrorMessage("계정 삭제", err));
       }
@@ -1848,10 +1891,23 @@
     });
     document.getElementById("addAuthorizedUserBtn").addEventListener("click", addAuthorizedUser);
     document.getElementById("refreshAuthorizedUsersBtn").addEventListener("click", loadAuthorizedUsers);
-    loadCleanupItemsBtn.addEventListener("click", loadCleanupItems);
+    loadCleanupItemsBtn.addEventListener("click", () => loadCleanupItems(false));
+    loadMoreCleanupItemsBtn.addEventListener("click", () => loadCleanupItems(true));
     selectAllCleanupItemsBtn.addEventListener("click", selectAllCleanupItems);
     deleteSelectedItemsBtn.addEventListener("click", deleteSelectedCleanupItems);
-    cleanupStatusFilter.addEventListener("change", updateCleanupDeleteState);
+    cleanupStatusFilter.addEventListener("change", () => {
+      NSMissingPagination.invalidateRequests();
+      // The invalidated request's finally block is generation-guarded, so it
+      // cannot clear this flag. Reset it here to avoid a permanently busy view.
+      cleanupIsLoading = false;
+      cleanupItems = [];
+      selectedCleanupIds.clear();
+      cleanupLastVisible = null;
+      cleanupHasMore = false;
+      cleanupItemsList.innerHTML = "<div class='empty-message'>상태를 선택한 뒤 정리 대상을 불러오세요.</div>";
+      if (loadMoreCleanupItemsBtn) loadMoreCleanupItemsBtn.style.display = "none";
+      updateCleanupDeleteState();
+    });
     document.getElementById("addStoragePlaceBtn").addEventListener("click", () => addPlaceOption("storage"));
     document.getElementById("addFoundPlaceBtn").addEventListener("click", () => addPlaceOption("found"));
     document.getElementById("bulkAddCsvBtn").addEventListener("click", bulkAddCsvUsers);
@@ -1862,7 +1918,10 @@
     }
 
     auth.onAuthStateChanged(async (user) => {
+      authGeneration += 1;
       currentUser = user;
+      clearAdminSessionView();
+      const authOperation = captureAuthOperation();
       currentAuthorizedRole = "";
       hasPrivacyConsent = false;
       isAdmin = false;
@@ -1870,14 +1929,17 @@
       if (user && user.email) {
         try {
           const authorizedUser = await getAuthorizedUser(user.email);
+          if (!isCurrentAuthOperation(authOperation)) return;
           if (authorizedUser) {
             currentAuthorizedRole = authorizedUser.role === "admin" ? "admin" : "teacher";
             if (currentAuthorizedRole === "admin") {
               hasPrivacyConsent = await hasCurrentPrivacyConsent(user.email);
+              if (!isCurrentAuthOperation(authOperation)) return;
               isAdmin = hasPrivacyConsent;
             }
           }
         } catch (err) {
+          if (!isCurrentAuthOperation(authOperation)) return;
           authorizationCheckError = err;
           console.error("관리자 권한 확인 오류:", err);
         }

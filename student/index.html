@@ -716,6 +716,7 @@
   
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script src="../cursor-pagination.js"></script>
 
   <script>
 const firebaseConfig = {
@@ -752,7 +753,9 @@ const firebaseConfig = {
     let currentCategory = "전체";
     let lastVisible = null;
     let isLoading = false;
-    const MAX_PUBLIC_ITEMS = 60;
+    const PUBLIC_FETCH_PAGE_SIZE = 60;
+    let hasMorePublicItems = true;
+    const seenPublicItemIds = new Set();
     const PAGE_SIZE = 12;
     const DEFAULT_EMPTY_MESSAGE = "현재 보관 중인 분실물이 없습니다.";
     const PUBLIC_LOST_ITEMS_COLLECTION = "public_lost_items";
@@ -1045,7 +1048,7 @@ const firebaseConfig = {
           ? "선택한 검색·필터 조건에 맞는 분실물이 없습니다."
           : DEFAULT_EMPTY_MESSAGE;
         emptyMessage.style.display = "block";
-        if (loadMoreBtn) loadMoreBtn.style.display = "none";
+        if (loadMoreBtn) loadMoreBtn.style.display = hasMorePublicItems ? "block" : "none";
         return;
       } else {
         emptyMessage.style.display = "none";
@@ -1114,11 +1117,7 @@ const firebaseConfig = {
       });
 
       // 더 보기 버튼 표시 여부 결정
-      if (
-        currentCategory === "전체" &&
-        !trimmed &&
-        totalCount > displayCount
-      ) {
+      if ((totalCount > displayCount && currentCategory === "전체" && !trimmed) || hasMorePublicItems) {
         if (loadMoreBtn) loadMoreBtn.style.display = "block";
       } else {
         if (loadMoreBtn) loadMoreBtn.style.display = "none";
@@ -1254,96 +1253,74 @@ const firebaseConfig = {
     });
 
     async function loadItems(isInitial = false) {
-      if (isLoading) return;
+      if (isLoading || (!isInitial && !hasMorePublicItems)) return;
       isLoading = true;
       if (loadingMessage) loadingMessage.style.display = "block";
       if (emptyMessage) emptyMessage.style.display = "none";
+      const requestToken = NSMissingPagination.beginRequest();
       try {
         if (emptyMessage) emptyMessage.textContent = DEFAULT_EMPTY_MESSAGE;
-        items = [];
-        const seen = new Set();
-        const addSnapshotItems = (snapshot, includesImage = false) => {
-          snapshot.docs.forEach((doc) => {
-            if (items.length >= MAX_PUBLIC_ITEMS) return;
-            if (seen.has(doc.id)) return;
-            seen.add(doc.id);
-            const data = doc.data() || {};
-            items.push({
-              id: doc.id,
-              title: data.title || "",
-              category: data.category || "기타",
-              storageLocation: data.storageLocation || "",
-              foundPlace: data.foundPlace || "",
-              foundTime: normalizeTs(data.foundTime),
-              createdAt: normalizeTs(data.createdAt) || normalizeTs(data.foundTime),
-              imageDataUrl: includesImage ? (data.imageDataUrl || "") : "",
-              imageUrl: includesImage ? (data.imageUrl || "") : "",
-              status: "stored"
-            });
+        if (isInitial) {
+          items = [];
+          seenPublicItemIds.clear();
+          lastVisible = null;
+          hasMorePublicItems = true;
+        }
+        const query = db.collection("public_lost_items")
+          .where("status", "in", ["stored", "보관 중"]);
+        const page = await NSMissingPagination.fetchPage(
+          query, lastVisible, PUBLIC_FETCH_PAGE_SIZE, firebase.firestore.FieldPath.documentId()
+        );
+        if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
+        page.docs.forEach((doc) => {
+          if (seenPublicItemIds.has(doc.id)) return;
+          seenPublicItemIds.add(doc.id);
+          const data = doc.data() || {};
+          items.push({
+            id: doc.id,
+            title: data.title || "",
+            category: data.category || "기타",
+            storageLocation: data.storageLocation || "",
+            foundPlace: data.foundPlace || "",
+            foundTime: normalizeTs(data.foundTime),
+            createdAt: normalizeTs(data.createdAt) || normalizeTs(data.foundTime),
+            imageDataUrl: data.imageDataUrl || "",
+            imageUrl: data.imageUrl || "",
+            status: "stored"
           });
-        };
-
-        let summaryReadSucceeded = false;
-        try {
-          const storedSummarySnapshot = await db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION)
-            .where("status", "==", "stored")
-            .limit(MAX_PUBLIC_ITEMS)
-            .get();
-          addSnapshotItems(storedSummarySnapshot);
-
-          const remainingSummaryCount = MAX_PUBLIC_ITEMS - items.length;
-          if (remainingSummaryCount > 0) {
-            const legacySummarySnapshot = await db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION)
-              .where("status", "==", "보관 중")
-              .limit(remainingSummaryCount)
-              .get();
-            addSnapshotItems(legacySummarySnapshot);
-          }
-          summaryReadSucceeded = true;
-        } catch (summaryErr) {
-          console.warn("분실물 요약 목록을 불러오지 못해 기존 목록으로 전환합니다.", summaryErr);
-        }
-
-        const remainingCount = MAX_PUBLIC_ITEMS - items.length;
-        const legacyLimit = summaryReadSucceeded ? remainingCount : MAX_PUBLIC_ITEMS - items.length;
-        if (legacyLimit > 0) {
-          const legacySnapshot = await db.collection(PUBLIC_LOST_ITEMS_COLLECTION)
-            .where("status", "==", "보관 중")
-            .limit(legacyLimit)
-            .get();
-          addSnapshotItems(legacySnapshot, true);
-          const remainingLegacyCount = MAX_PUBLIC_ITEMS - items.length;
-          if (remainingLegacyCount > 0) {
-            const storedLegacySnapshot = await db.collection(PUBLIC_LOST_ITEMS_COLLECTION)
-              .where("status", "==", "stored")
-              .limit(remainingLegacyCount)
-              .get();
-            addSnapshotItems(storedLegacySnapshot, true);
-          }
-        }
-
-        items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-        displayCount = PAGE_SIZE;
-        lastVisible = null;
+        });
+        lastVisible = page.cursor;
+        hasMorePublicItems = page.hasMore;
+        items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "") || a.id.localeCompare(b.id));
+        if (isInitial) displayCount = PAGE_SIZE;
         renderItems(searchInput.value);
       } catch (err) {
+        if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
         console.error("분실물 불러오기 오류:", err);
         if (emptyMessage) {
           emptyMessage.textContent = "분실물 목록을 불러오지 못했습니다. 연결 상태를 확인한 뒤 화면을 새로고침해 주세요.";
           emptyMessage.style.display = "block";
         }
       } finally {
-        isLoading = false;
-        if (loadingMessage) loadingMessage.style.display = "none";
+        if (NSMissingPagination.isCurrentRequest(requestToken)) {
+          isLoading = false;
+          if (loadingMessage) loadingMessage.style.display = "none";
+        }
       }
     }
 
 
 
     if (loadMoreBtn) {
-      loadMoreBtn.addEventListener("click", () => {
+      loadMoreBtn.addEventListener("click", async () => {
+        const isUnfiltered = currentCategory === "전체" && !searchInput.value.trim();
+        if (isUnfiltered && displayCount < items.length) {
+          displayCount = Math.min(displayCount + PAGE_SIZE, items.length);
+          renderItems(searchInput.value);
+          return;
+        }
         displayCount += PAGE_SIZE;
-        renderItems(searchInput.value);
+        await loadItems(false);
       });
     }
 
