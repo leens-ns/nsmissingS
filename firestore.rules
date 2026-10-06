@@ -66,6 +66,24 @@ service cloud.firestore {
       allow create, update, delete: if isAuthorizedTeacher();
     }
 
+    match /lost_item_summaries/{itemId} {
+      allow read, delete: if isAuthorizedTeacher();
+      allow create, update: if isAuthorizedTeacher()
+        && request.resource.data.keys().hasOnly([
+          "title", "category", "storageLocation", "foundPlace", "foundTime",
+          "finderName", "createdAt", "imageExpiresAt", "status", "ownerInfo",
+          "statusUpdatedAt", "deletedAt", "deletedBy", "restoredAt", "restoredBy"
+        ]);
+    }
+
+    match /lost_item_images/{itemId} {
+      allow read, delete: if isAuthorizedTeacher();
+      allow create, update: if isAuthorizedTeacher()
+        && request.resource.data.keys().hasOnly([
+          "imageDataUrl", "imageUrl", "updatedAt"
+        ]);
+    }
+
     match /public_lost_items/{itemId} {
       allow read: if isAuthorizedTeacher()
         || (resource.data.status in ["stored", "보관 중"]
@@ -78,6 +96,36 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           "title", "category", "storageLocation", "foundPlace", "foundTime",
           "createdAt", "imageDataUrl", "imageUrl", "status"
+        ]);
+      allow delete: if isAuthorizedTeacher();
+    }
+
+    match /public_lost_item_summaries/{itemId} {
+      allow read: if isAuthorizedTeacher()
+        || (resource.data.status in ["stored", "보관 중"]
+          && resource.data.keys().hasOnly([
+            "title", "category", "storageLocation", "foundPlace", "foundTime",
+            "createdAt", "status"
+          ]));
+      allow create, update: if isAuthorizedTeacher()
+        && request.resource.data.status in ["stored", "보관 중"]
+        && request.resource.data.keys().hasOnly([
+          "title", "category", "storageLocation", "foundPlace", "foundTime",
+          "createdAt", "status"
+        ]);
+      allow delete: if isAuthorizedTeacher();
+    }
+
+    match /public_lost_item_images/{itemId} {
+      allow read: if isAuthorizedTeacher()
+        || (resource.data.status in ["stored", "보관 중"]
+          && resource.data.keys().hasOnly([
+            "imageDataUrl", "imageUrl", "status"
+          ]));
+      allow create, update: if isAuthorizedTeacher()
+        && request.resource.data.status in ["stored", "보관 중"]
+        && request.resource.data.keys().hasOnly([
+          "imageDataUrl", "imageUrl", "status"
         ]);
       allow delete: if isAuthorizedTeacher();
     }

@@ -535,12 +535,30 @@
       overflow: hidden;
       background: #e5e7eb;
     }
+    .item-image-wrapper.is-loading::after,
+    .item-image-wrapper.is-missing::after {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #64748b;
+      font-size: 0.78rem;
+      pointer-events: none;
+    }
+    .item-image-wrapper.is-loading::after { content: "사진 불러오는 중"; }
+    .item-image-wrapper.is-missing::after { content: "사진 없음"; }
     .item-image-wrapper img {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+    .item-image-wrapper img.is-loaded {
+      opacity: 1;
+    }
     }
     .item-body {
       padding: 10px 12px 12px;
@@ -630,15 +648,32 @@
     .modal-image {
       flex: 1;
       max-height: 380px;
+      min-height: 180px;
       overflow: hidden;
       background: #e5e7eb;
       cursor: pointer; /* 사진 클릭 가능 */
     }
+    .modal-image.is-loading::after,
+    .modal-image.is-missing::after {
+      min-height: 180px;
+      display: grid;
+      place-items: center;
+      color: #64748b;
+      font-size: 0.82rem;
+    }
+    .modal-image.is-loading::after { content: "사진 불러오는 중"; }
+    .modal-image.is-missing::after { content: "사진 없음"; }
     .modal-image img {
       width: 100%;
       height: 100%;
       object-fit: contain;
       background: #000;
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+    .modal-image img.is-loaded {
+      opacity: 1;
+    }
     }
     .modal-body {
       padding: 12px 16px 16px;
@@ -1287,6 +1322,10 @@ const firebaseConfig = {
       const APP_SETTINGS_COLLECTION = "app_settings";
       const PLACE_OPTIONS_DOC = "place_options";
       const PUBLIC_LOST_ITEMS_COLLECTION = "public_lost_items";
+      const PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION = "public_lost_item_summaries";
+      const PUBLIC_LOST_ITEM_IMAGES_COLLECTION = "public_lost_item_images";
+      const LOST_ITEM_SUMMARIES_COLLECTION = "lost_item_summaries";
+      const LOST_ITEM_IMAGES_COLLECTION = "lost_item_images";
       const BOOTSTRAP_ADMIN_EMAILS = ["leens@nsworld.net"];
       const DEFAULT_STORAGE_LOCATIONS = ["교무실", "행정실", "보건실", "상담실", "가온누리"];
       const DEFAULT_FOUND_PLACES = ["운동장", "강당", "급식실", "복도", "교실", "도서관"];
@@ -1474,27 +1513,224 @@ const firebaseConfig = {
         };
       }
 
-      async function syncPublicLostItem(itemId, data) {
-        const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId);
+      function createPublicLostItemSummaryPayload(data) {
+        const publicData = createPublicLostItemPayload(data);
+        if (!publicData) return null;
+        const { imageDataUrl, imageUrl, ...summary } = publicData;
+        return summary;
+      }
+
+      function createPublicLostItemImagePayload(data) {
+        const publicData = createPublicLostItemPayload(data);
+        if (!publicData) return null;
+        return {
+          imageDataUrl: publicData.imageDataUrl || "",
+          imageUrl: publicData.imageUrl || "",
+          status: "stored"
+        };
+      }
+
+      function createManagementLostItemSummaryPayload(data) {
+        if (!data) return null;
+        return {
+          title: data.title || "",
+          category: data.category || "기타",
+          storageLocation: data.storageLocation || "",
+          foundPlace: data.foundPlace || "",
+          foundTime: data.foundTime || null,
+          finderName: data.finderName || "",
+          createdAt: data.createdAt || null,
+          imageExpiresAt: data.imageExpiresAt || null,
+          status: normalizeLostItemStatus(data.status),
+          ownerInfo: data.ownerInfo || "",
+          ...(data.statusUpdatedAt ? { statusUpdatedAt: data.statusUpdatedAt } : {}),
+          ...(data.deletedAt ? { deletedAt: data.deletedAt } : {}),
+          ...(data.deletedBy ? { deletedBy: data.deletedBy } : {}),
+          ...(data.restoredAt ? { restoredAt: data.restoredAt } : {}),
+          ...(data.restoredBy ? { restoredBy: data.restoredBy } : {})
+        };
+      }
+
+      function createManagementLostItemImagePayload(data) {
+        if (!data) return null;
+        return {
+          imageDataUrl: data.imageDataUrl || "",
+          imageUrl: data.imageUrl || "",
+          ...(data.imageDataUrl || data.imageUrl ? { updatedAt: firebase.firestore.FieldValue.serverTimestamp() } : {})
+        };
+      }
+
+      async function loadStoredLostItemImage(itemId, sourceData) {
+        if (sourceData && (sourceData.imageDataUrl || sourceData.imageUrl)) return sourceData;
+        const imageSnapshot = await db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId).get().catch(() => null);
+        const imageData = imageSnapshot && imageSnapshot.exists ? imageSnapshot.data() || {} : {};
+        return {
+          ...(sourceData || {}),
+          imageDataUrl: imageData.imageDataUrl || "",
+          imageUrl: imageData.imageUrl || ""
+        };
+      }
+
+      async function syncManagementLostItem(itemId, data) {
         let sourceData = data;
         if (!sourceData) {
           const sourceDoc = await db.collection("lost_items").doc(itemId).get();
           if (!sourceDoc.exists) {
-            await publicRef.delete().catch((err) => {
-              if (err && err.code !== "not-found") throw err;
-            });
+            await Promise.all([
+              db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId).delete().catch(() => undefined),
+              db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId).delete().catch(() => undefined)
+            ]);
             return;
           }
           sourceData = sourceDoc.data() || {};
         }
-        const publicData = createPublicLostItemPayload(sourceData);
-        if (!publicData) {
-          await publicRef.delete().catch((err) => {
+        const imageData = await loadStoredLostItemImage(itemId, sourceData);
+        await Promise.all([
+          db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId)
+            .set(createManagementLostItemSummaryPayload(sourceData)),
+          db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId)
+            .set(createManagementLostItemImagePayload(imageData))
+        ]);
+      }
+
+      async function deletePublicLostItemData(itemId) {
+        const refs = [
+          db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId),
+          db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId),
+          db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(itemId)
+        ];
+        await Promise.all(refs.map((ref) => ref.delete().catch((err) => {
+          if (err && err.code !== "not-found") throw err;
+        })));
+      }
+
+      async function deleteManagementLostItemData(itemId) {
+        await Promise.all([
+          db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId).delete().catch((err) => {
             if (err && err.code !== "not-found") throw err;
-          });
+          }),
+          db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId).delete().catch((err) => {
+            if (err && err.code !== "not-found") throw err;
+          })
+        ]);
+      }
+
+      async function syncPublicLostItem(itemId, data) {
+        const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId);
+        const summaryRef = db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId);
+        const imageRef = db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(itemId);
+        let sourceData = data;
+        if (!sourceData) {
+          const sourceDoc = await db.collection("lost_items").doc(itemId).get();
+          if (!sourceDoc.exists) {
+            await deletePublicLostItemData(itemId);
+            await deleteManagementLostItemData(itemId);
+            return;
+          }
+          sourceData = sourceDoc.data() || {};
+        }
+        const enrichedSourceData = await loadStoredLostItemImage(itemId, sourceData);
+        await syncManagementLostItem(itemId, enrichedSourceData);
+        const publicData = createPublicLostItemPayload(enrichedSourceData);
+        if (!publicData) {
+          await deletePublicLostItemData(itemId);
           return;
         }
-        await publicRef.set(publicData);
+        await Promise.all([
+          publicRef.set(publicData),
+          summaryRef.set(createPublicLostItemSummaryPayload(enrichedSourceData)),
+          imageRef.set(createPublicLostItemImagePayload(enrichedSourceData))
+        ]);
+      }
+
+      function getManagementItemImageSource(item) {
+        return item && (item.imageDataUrl || item.imageUrl) || "";
+      }
+
+      function applyManagementItemImage(img, imgWrap, item) {
+        if (!img || !imgWrap) return;
+        const source = getManagementItemImageSource(item);
+        if (!source) {
+          img.classList.remove("is-loaded");
+          imgWrap.classList.remove("is-loading");
+          imgWrap.classList.add("is-missing");
+          return;
+        }
+        imgWrap.classList.remove("is-missing");
+        imgWrap.classList.add("is-loading");
+        img.onload = () => {
+          img.classList.add("is-loaded");
+          imgWrap.classList.remove("is-loading");
+        };
+        img.onerror = () => {
+          img.classList.remove("is-loaded");
+          imgWrap.classList.remove("is-loading");
+          imgWrap.classList.add("is-missing");
+        };
+        img.src = source;
+      }
+
+      async function loadManagementItemImage(item) {
+        if (!item || getManagementItemImageSource(item)) return item;
+        if (itemImageRequests.has(item.id)) {
+          await itemImageRequests.get(item.id);
+          return item;
+        }
+
+        const request = (async () => {
+          let imageSnapshot = await db.collection(LOST_ITEM_IMAGES_COLLECTION)
+            .doc(item.id)
+            .get()
+            .catch(() => null);
+          let imageData = imageSnapshot && imageSnapshot.exists ? imageSnapshot.data() || {} : null;
+
+          // 사진 분리 문서가 없는 이전 자료만 원본 문서를 확인합니다.
+          if (!imageData || (!imageData.imageDataUrl && !imageData.imageUrl)) {
+            const legacySnapshot = await db.collection("lost_items")
+              .doc(item.id)
+              .get()
+              .catch(() => null);
+            imageData = legacySnapshot && legacySnapshot.exists ? legacySnapshot.data() || {} : {};
+          }
+
+          item.imageDataUrl = imageData.imageDataUrl || "";
+          item.imageUrl = imageData.imageUrl || "";
+        })().catch((err) => {
+          console.warn("교직원용 분실물 사진 불러오기 오류:", err);
+        });
+
+        itemImageRequests.set(item.id, request);
+        await request;
+        return item;
+      }
+
+      function observeManagementItemImage(img, imgWrap, item) {
+        const hydrate = async () => {
+          await loadManagementItemImage(item);
+          applyManagementItemImage(img, imgWrap, item);
+        };
+        if (getManagementItemImageSource(item)) {
+          applyManagementItemImage(img, imgWrap, item);
+          return;
+        }
+        if (itemImageObserver) {
+          img.__hydrateManagementItemImage = hydrate;
+          itemImageObserver.observe(img);
+        } else {
+          hydrate();
+        }
+      }
+
+      async function migrateLegacyManagementItem(doc) {
+        const data = doc.data() || {};
+        const hadLegacyImage = !!(data.imageDataUrl || data.imageUrl);
+        await syncPublicLostItem(doc.id, data);
+        if (hadLegacyImage) {
+          await doc.ref.update({
+            imageDataUrl: firebase.firestore.FieldValue.delete(),
+            imageUrl: firebase.firestore.FieldValue.delete()
+          });
+        }
       }
 
       function statusLabel(item) {
@@ -1711,6 +1947,8 @@ const firebaseConfig = {
       let displayCount = FIRST_PAGE_SIZE;
       let loadedStatusGroup = "";
       const DEFAULT_EMPTY_MESSAGE = "아직 등록된 분실물이 없습니다. 교직원이 분실물을 등록하면 이곳에 표시됩니다.";
+      let itemImageObserver = null;
+      const itemImageRequests = new Map();
 
       function isStandaloneApp() {
         return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -2132,6 +2370,7 @@ const firebaseConfig = {
 
       function renderItems(filterText = "") {
         if (!itemsContainer) return;
+        if (itemImageObserver) itemImageObserver.disconnect();
         itemsContainer.innerHTML = "";
 
         let list = items.slice();
@@ -2230,13 +2469,15 @@ const firebaseConfig = {
           selectRow.appendChild(selectLabel);
 
           const imgWrap = document.createElement("div");
-          imgWrap.className = "item-image-wrapper";
+          imgWrap.className = "item-image-wrapper is-loading";
 
           const img = document.createElement("img");
           img.loading = "lazy";
-          img.src = item.imageDataUrl || item.imageUrl || "";
+          img.decoding = "async";
+          img.fetchPriority = "low";
           img.alt = item.title || "분실물 이미지";
           imgWrap.appendChild(img);
+          observeManagementItemImage(img, imgWrap, item);
 
           const body = document.createElement("div");
           body.className = "item-body";
@@ -2302,7 +2543,7 @@ const firebaseConfig = {
         updateBulkButtonsState();
       }
 
-      function openModal(itemId) {
+      async function openModal(itemId) {
         if (!detailModal) return;
         const item = items.find((it) => it.id === itemId);
         if (!item) return;
@@ -2313,7 +2554,10 @@ const firebaseConfig = {
         modalTitle.textContent = item.title || "분실물";
         modalTitleInput.value = item.title || "";
 
-        modalImage.src = item.imageDataUrl || item.imageUrl || "";
+        modalImage.removeAttribute("src");
+        modalImage.classList.remove("is-loaded");
+        modalImageWrapper.classList.remove("is-missing");
+        modalImageWrapper.classList.add("is-loading");
         modalCategory.textContent = item.category || "-";
         modalCategoryInput.value = item.category || "기타";
 
@@ -2405,12 +2649,33 @@ const firebaseConfig = {
         }
 
         detailModal.style.display = "flex";
+        await loadManagementItemImage(item);
+        if (currentModalItemId !== itemId) return;
+        const imageSource = getManagementItemImageSource(item);
+        if (imageSource) {
+          modalImage.onload = () => {
+            modalImage.classList.add("is-loaded");
+            modalImageWrapper.classList.remove("is-loading", "is-missing");
+          };
+          modalImage.onerror = () => {
+            modalImage.classList.remove("is-loaded");
+            modalImageWrapper.classList.remove("is-loading");
+            modalImageWrapper.classList.add("is-missing");
+          };
+          modalImage.src = imageSource;
+        } else {
+          modalImageWrapper.classList.remove("is-loading");
+          modalImageWrapper.classList.add("is-missing");
+        }
       }
 
       function closeModal() {
         if (!detailModal) return;
         detailModal.style.display = "none";
         currentModalItemId = null;
+        modalImage.removeAttribute("src");
+        modalImage.classList.remove("is-loaded");
+        modalImageWrapper.classList.remove("is-loading", "is-missing");
         setEditMode(false);
       }
 
@@ -2699,15 +2964,29 @@ const firebaseConfig = {
               foundTime: foundTimeTs,
               finderName,
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-              imageDataUrl,
               status: "stored",
               ownerInfo: ""
             };
             const batch = db.batch();
             batch.set(lostItemRef, itemPayload);
             batch.set(
-              db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(lostItemRef.id),
-              createPublicLostItemPayload(itemPayload)
+              db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(lostItemRef.id),
+              createManagementLostItemSummaryPayload(itemPayload)
+            );
+            batch.set(
+              db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(lostItemRef.id),
+              createManagementLostItemImagePayload({ imageDataUrl })
+            );
+            const publicData = createPublicLostItemPayload(itemPayload);
+            publicData.imageDataUrl = imageDataUrl;
+            batch.set(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(lostItemRef.id), publicData);
+            batch.set(
+              db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(lostItemRef.id),
+              createPublicLostItemSummaryPayload(itemPayload)
+            );
+            batch.set(
+              db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(lostItemRef.id),
+              createPublicLostItemImagePayload(itemPayload)
             );
             await batch.commit();
 
@@ -2922,9 +3201,8 @@ const firebaseConfig = {
           try {
             if (isPermanent) {
               await db.collection("lost_items").doc(item.id).delete();
-              await db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(item.id).delete().catch((err) => {
-                if (err && err.code !== "not-found") throw err;
-              });
+              await deletePublicLostItemData(item.id);
+              await deleteManagementLostItemData(item.id);
               alert("해당 분실물이 영구 삭제되었습니다.");
             } else {
               await db.collection("lost_items").doc(item.id).update({
@@ -3059,9 +3337,8 @@ const firebaseConfig = {
             if (isPermanent) {
               for (const id of targetIds) {
                 await db.collection("lost_items").doc(id).delete();
-                await db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id).delete().catch((err) => {
-                  if (err && err.code !== "not-found") throw err;
-                });
+                await deletePublicLostItemData(id);
+                await deleteManagementLostItemData(id);
               }
               alert(`선택한 ${targetIds.length}개의 분실물이 영구 삭제되었습니다.`);
             } else {
@@ -3096,10 +3373,6 @@ const firebaseConfig = {
           const itemLimit = statusGroup === "stored"
             ? MAX_STORED_MANAGEMENT_ITEMS
             : MAX_STATUS_MANAGEMENT_ITEMS;
-          const query = db.collection("lost_items")
-            .where("status", "in", statusStorageValues(statusGroup))
-            .limit(itemLimit);
-          const snapshot = await query.get();
           items = [];
           selectedIds.clear();
           loadedStatusGroup = statusGroup;
@@ -3108,9 +3381,12 @@ const firebaseConfig = {
           const toTrash = [];
           const toNormalize = [];
           const now = new Date();
-
-          if (!snapshot.empty) {
+          const seen = new Set();
+          const legacyDocsForMigration = [];
+          const addSnapshotItems = (snapshot, includesImage = false) => {
             snapshot.docs.forEach((doc) => {
+              if (items.length >= itemLimit || seen.has(doc.id)) return;
+              seen.add(doc.id);
               const data = doc.data() || {};
               const rawStatus = data.status;
               let status = normalizeLostItemStatus(rawStatus);
@@ -3142,14 +3418,35 @@ const firebaseConfig = {
                 foundTime: normalizeTs(data.foundTime),
                 finderName: data.finderName || "",
                 createdAt: normalizeTs(data.createdAt) || normalizeTs(data.foundTime),
-                imageDataUrl: data.imageDataUrl || "",
-                imageUrl: data.imageUrl || "",
+                imageDataUrl: includesImage ? (data.imageDataUrl || "") : "",
+                imageUrl: includesImage ? (data.imageUrl || "") : "",
                 imageExpiresAt: normalizeTs(data.imageExpiresAt),
                 status: status,
                 ownerInfo: data.ownerInfo || ""
               });
+              if (includesImage) legacyDocsForMigration.push(doc);
             });
+          };
 
+          let summaryReadSucceeded = false;
+          try {
+            const summarySnapshot = await db.collection(LOST_ITEM_SUMMARIES_COLLECTION)
+              .where("status", "in", statusStorageValues(statusGroup))
+              .limit(itemLimit)
+              .get();
+            addSnapshotItems(summarySnapshot);
+            summaryReadSucceeded = true;
+          } catch (summaryErr) {
+            console.warn("분실물 요약 목록을 불러오지 못해 기존 목록으로 전환합니다.", summaryErr);
+          }
+
+          // 분리 문서가 아직 없는 이전 데이터만 원본 문서를 읽어 호환한다.
+          if (!summaryReadSucceeded || items.length < itemLimit) {
+            const legacySnapshot = await db.collection("lost_items")
+              .where("status", "in", statusStorageValues(statusGroup))
+              .limit(itemLimit)
+              .get();
+            addSnapshotItems(legacySnapshot, true);
           }
 
           // 오래된 항목은 바로 삭제하지 않고 휴지통으로 이동
@@ -3182,6 +3479,17 @@ const firebaseConfig = {
             }
           }
           renderItems(searchInput ? searchInput.value : "");
+
+          // 최초 호환 조회 후에는 메타데이터와 사진을 분리해 다음 조회부터 가볍게 읽는다.
+          if (legacyDocsForMigration.length) {
+            setTimeout(() => {
+              Promise.all(legacyDocsForMigration.map((doc) =>
+                migrateLegacyManagementItem(doc).catch((migrationErr) => {
+                  console.warn("기존 분실물 사진 분리 중 오류:", migrationErr);
+                })
+              ));
+            }, 0);
+          }
         } catch (err) {
           console.error("분실물 불러오기 오류:", err);
           if (emptyMessage) {
@@ -3200,6 +3508,18 @@ const firebaseConfig = {
           displayCount += PAGE_SIZE;
           renderItems(searchInput ? searchInput.value : "");
         });
+      }
+
+      if ("IntersectionObserver" in window) {
+        itemImageObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            itemImageObserver.unobserve(entry.target);
+            if (entry.target.__hydrateManagementItemImage) {
+              entry.target.__hydrateManagementItemImage();
+            }
+          });
+        }, { rootMargin: "400px 0px" });
       }
 
       updateAuthUI();

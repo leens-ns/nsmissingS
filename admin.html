@@ -854,6 +854,10 @@
     const APP_SETTINGS_COLLECTION = "app_settings";
     const PLACE_OPTIONS_DOC = "place_options";
     const PUBLIC_LOST_ITEMS_COLLECTION = "public_lost_items";
+    const PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION = "public_lost_item_summaries";
+    const PUBLIC_LOST_ITEM_IMAGES_COLLECTION = "public_lost_item_images";
+    const LOST_ITEM_SUMMARIES_COLLECTION = "lost_item_summaries";
+    const LOST_ITEM_IMAGES_COLLECTION = "lost_item_images";
     const BOOTSTRAP_ADMIN_EMAILS = ["leens@nsworld.net"];
     const DEFAULT_STORAGE_LOCATIONS = ["교무실", "행정실", "보건실", "상담실", "가온누리"];
     const DEFAULT_FOUND_PLACES = ["운동장", "강당", "급식실", "복도", "교실", "도서관"];
@@ -972,6 +976,107 @@
         status: "stored"
       };
     }
+
+    function createPublicLostItemSummaryPayload(data) {
+      const publicData = createPublicLostItemPayload(data);
+      if (!publicData) return null;
+      const { imageDataUrl, imageUrl, ...summary } = publicData;
+      return summary;
+    }
+
+    function createPublicLostItemImagePayload(data) {
+      const publicData = createPublicLostItemPayload(data);
+      if (!publicData) return null;
+      return {
+        imageDataUrl: publicData.imageDataUrl || "",
+        imageUrl: publicData.imageUrl || "",
+        status: "stored"
+      };
+    }
+
+    function createManagementLostItemSummaryPayload(data) {
+      if (!data) return null;
+      return {
+        title: data.title || "",
+        category: data.category || "기타",
+        storageLocation: data.storageLocation || "",
+        foundPlace: data.foundPlace || "",
+        foundTime: data.foundTime || null,
+        finderName: data.finderName || "",
+        createdAt: data.createdAt || null,
+        imageExpiresAt: data.imageExpiresAt || null,
+        status: normalizeLostItemStatus(data.status),
+        ownerInfo: data.ownerInfo || "",
+        ...(data.statusUpdatedAt ? { statusUpdatedAt: data.statusUpdatedAt } : {}),
+        ...(data.deletedAt ? { deletedAt: data.deletedAt } : {}),
+        ...(data.deletedBy ? { deletedBy: data.deletedBy } : {}),
+        ...(data.restoredAt ? { restoredAt: data.restoredAt } : {}),
+        ...(data.restoredBy ? { restoredBy: data.restoredBy } : {})
+      };
+    }
+
+    function createManagementLostItemImagePayload(data) {
+      if (!data) return null;
+      return {
+        imageDataUrl: data.imageDataUrl || "",
+        imageUrl: data.imageUrl || "",
+        ...(data.imageDataUrl || data.imageUrl
+          ? { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }
+          : {})
+      };
+    }
+
+    async function deletePublicLostItemData(itemId) {
+      const refs = [
+        db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId),
+        db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId),
+        db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(itemId)
+      ];
+      await Promise.all(refs.map((ref) => ref.delete().catch((err) => {
+        if (err && err.code !== "not-found") throw err;
+      })));
+    }
+
+    async function syncManagementLostItem(itemId, data) {
+      let sourceData = data;
+      if (!sourceData) {
+        const sourceDoc = await db.collection("lost_items").doc(itemId).get();
+        if (!sourceDoc.exists) {
+          await deleteManagementLostItemData(itemId);
+          return;
+        }
+        sourceData = sourceDoc.data() || {};
+      }
+      let imageData = sourceData;
+      if (!imageData.imageDataUrl && !imageData.imageUrl) {
+        const imageSnapshot = await db.collection(LOST_ITEM_IMAGES_COLLECTION)
+          .doc(itemId)
+          .get()
+          .catch(() => null);
+        imageData = {
+          ...sourceData,
+          ...((imageSnapshot && imageSnapshot.exists) ? imageSnapshot.data() || {} : {})
+        };
+      }
+      await Promise.all([
+        db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId)
+          .set(createManagementLostItemSummaryPayload(sourceData)),
+        db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId)
+          .set(createManagementLostItemImagePayload(imageData))
+      ]);
+    }
+
+    async function deleteManagementLostItemData(itemId) {
+      await Promise.all([
+        db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId).delete().catch((err) => {
+          if (err && err.code !== "not-found") throw err;
+        }),
+        db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId).delete().catch((err) => {
+          if (err && err.code !== "not-found") throw err;
+        })
+      ]);
+    }
+
     async function syncPublicLostItems() {
       if (!isAdmin || !currentUser) throw new Error("관리자 로그인 후 사용할 수 있습니다.");
       const snapshot = await db.collection("lost_items").get();
@@ -981,6 +1086,7 @@
       let synced = 0;
       let removed = 0;
       let normalized = 0;
+      let migrated = 0;
       const commitBatch = async () => {
         if (!writes) return;
         await batch.commit();
@@ -991,38 +1097,84 @@
         const sourceData = doc.data() || {};
         const normalizedStatus = normalizeLostItemStatus(sourceData.status);
         const sourceUpdates = {};
-        if (sourceData.status !== normalizedStatus) sourceUpdates.status = normalizedStatus;
-        if (!sourceData.createdAt && sourceData.foundTime) sourceUpdates.createdAt = sourceData.foundTime;
+        const normalizedSourceData = { ...sourceData };
+        if (sourceData.status !== normalizedStatus) {
+          sourceUpdates.status = normalizedStatus;
+          normalizedSourceData.status = normalizedStatus;
+        }
+        if (!sourceData.createdAt && sourceData.foundTime) {
+          sourceUpdates.createdAt = sourceData.foundTime;
+          normalizedSourceData.createdAt = sourceData.foundTime;
+        }
+        const hasLegacyImage = !!(sourceData.imageDataUrl || sourceData.imageUrl);
+        if (hasLegacyImage) {
+          sourceUpdates.imageDataUrl = firebase.firestore.FieldValue.delete();
+          sourceUpdates.imageUrl = firebase.firestore.FieldValue.delete();
+          migrated += 1;
+        }
         if (Object.keys(sourceUpdates).length) {
           batch.update(doc.ref, sourceUpdates);
-          normalized += 1;
+          if (sourceData.status !== normalizedStatus || (!sourceData.createdAt && sourceData.foundTime)) {
+            normalized += 1;
+          }
           writes += 1;
-          if (writes >= 400) await commitBatch();
         }
         const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(doc.id);
-        const publicData = createPublicLostItemPayload({
-          ...sourceData,
-          ...sourceUpdates
-        });
+        const summaryRef = db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(doc.id);
+        const imageRef = db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(doc.id);
+        const managementSummaryRef = db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(doc.id);
+        const managementImageRef = db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(doc.id);
+        const publicSourceData = normalizedSourceData;
+        const publicData = createPublicLostItemPayload(publicSourceData);
+        batch.set(managementSummaryRef, createManagementLostItemSummaryPayload(publicSourceData));
+        writes += 1;
+        if (hasLegacyImage) {
+          batch.set(managementImageRef, createManagementLostItemImagePayload(publicSourceData));
+          writes += 1;
+        }
         if (publicData) {
           batch.set(publicRef, publicData);
+          batch.set(summaryRef, createPublicLostItemSummaryPayload(publicSourceData));
+          batch.set(imageRef, createPublicLostItemImagePayload(publicSourceData));
           synced += 1;
+          writes += 3;
         } else {
           batch.delete(publicRef);
+          batch.delete(summaryRef);
+          batch.delete(imageRef);
+          writes += 3;
         }
-        writes += 1;
         if (writes >= 400) await commitBatch();
       }
-      const publicSnapshot = await db.collection(PUBLIC_LOST_ITEMS_COLLECTION).get();
-      for (const publicDoc of publicSnapshot.docs) {
-        if (sourceIds.has(publicDoc.id)) continue;
-        batch.delete(publicDoc.ref);
+      const [publicSnapshot, publicSummarySnapshot, publicImageSnapshot, managementSummarySnapshot, managementImageSnapshot] = await Promise.all([
+        db.collection(PUBLIC_LOST_ITEMS_COLLECTION).get(),
+        db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).get(),
+        db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).get(),
+        db.collection(LOST_ITEM_SUMMARIES_COLLECTION).get(),
+        db.collection(LOST_ITEM_IMAGES_COLLECTION).get()
+      ]);
+      const staleIds = new Set([
+        ...publicSnapshot.docs.map((doc) => doc.id),
+        ...publicSummarySnapshot.docs.map((doc) => doc.id),
+        ...publicImageSnapshot.docs.map((doc) => doc.id),
+        ...managementSummarySnapshot.docs.map((doc) => doc.id),
+        ...managementImageSnapshot.docs.map((doc) => doc.id)
+      ]);
+      for (const id of staleIds) {
+        if (sourceIds.has(id)) continue;
+        [
+          db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id),
+          db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(id),
+          db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(id),
+          db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(id),
+          db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(id)
+        ].forEach((ref) => batch.delete(ref));
         removed += 1;
-        writes += 1;
+        writes += 5;
         if (writes >= 400) await commitBatch();
       }
       await commitBatch();
-      return { total: snapshot.size, synced, removed, normalized };
+      return { total: snapshot.size, synced, removed, normalized, migrated };
     }
     async function getAuthorizedUser(email) {
       const normalized = normalizeEmail(email);
@@ -1326,9 +1478,8 @@
         if (isPermanent) {
           for (const id of targetIds) {
             await db.collection("lost_items").doc(id).delete();
-            await db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id).delete().catch((err) => {
-              if (err && err.code !== "not-found") throw err;
-            });
+            await deletePublicLostItemData(id);
+            await deleteManagementLostItemData(id);
           }
           alert(targetIds.length + "개 분실물을 영구 삭제했습니다.");
         } else {
@@ -1338,9 +1489,8 @@
               deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
               deletedBy: normalizeEmail(currentUser.email)
             });
-            await db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id).delete().catch((err) => {
-              if (err && err.code !== "not-found") throw err;
-            });
+            await deletePublicLostItemData(id);
+            await syncManagementLostItem(id);
           }
           alert(targetIds.length + "개 분실물을 휴지통으로 이동했습니다.");
         }
@@ -1645,7 +1795,7 @@
         syncPublicItemsBtn.disabled = true;
         try {
           const result = await syncPublicLostItems();
-          alert("공개 조회 데이터 " + result.synced + "개를 동기화하고, 오래된 공개 복사본 " + result.removed + "개와 기존 형식 " + result.normalized + "개를 정리했습니다.");
+          alert("공개 조회 데이터 " + result.synced + "개를 동기화하고, 기존 사진 " + result.migrated + "개를 분리했습니다. 오래된 복사본 " + result.removed + "개와 기존 형식 " + result.normalized + "개도 정리했습니다.");
         } catch (err) {
           console.error("공개 조회 데이터 동기화 오류:", err);
           alert("공개 조회 데이터 동기화에 실패했습니다. Firestore 규칙 배포 상태를 확인해 주세요.");
