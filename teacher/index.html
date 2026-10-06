@@ -1668,7 +1668,7 @@ const firebaseConfig = {
           imgWrap.classList.remove("is-loading");
           imgWrap.classList.add("is-missing");
         };
-        img.fetchPriority = "high";
+        img.setAttribute("fetchpriority", "high");
         img.src = source;
       }
 
@@ -2733,7 +2733,7 @@ const firebaseConfig = {
         if (currentModalItemId !== itemId) return;
         const imageSource = getManagementItemImageSource(item);
         if (imageSource) {
-          modalImage.fetchPriority = "high";
+          modalImage.setAttribute("fetchpriority", "high");
           modalImage.onload = () => {
             modalImage.classList.add("is-loaded");
             modalImageWrapper.classList.remove("is-loading", "is-missing");
