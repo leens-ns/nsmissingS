@@ -559,7 +559,6 @@
     .item-image-wrapper img.is-loaded {
       opacity: 1;
     }
-    }
     .item-body {
       padding: 10px 12px 12px;
       font-size: 0.82rem;
@@ -1669,6 +1668,7 @@ const firebaseConfig = {
           imgWrap.classList.remove("is-loading");
           imgWrap.classList.add("is-missing");
         };
+        img.fetchPriority = "high";
         img.src = source;
       }
 
@@ -2733,6 +2733,7 @@ const firebaseConfig = {
         if (currentModalItemId !== itemId) return;
         const imageSource = getManagementItemImageSource(item);
         if (imageSource) {
+          modalImage.fetchPriority = "high";
           modalImage.onload = () => {
             modalImage.classList.add("is-loaded");
             modalImageWrapper.classList.remove("is-loading", "is-missing");
