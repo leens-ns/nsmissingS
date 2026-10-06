@@ -756,6 +756,7 @@ const firebaseConfig = {
     const PUBLIC_FETCH_PAGE_SIZE = 60;
     let hasMorePublicItems = true;
     const seenPublicItemIds = new Set();
+    let publicItemsMode = "summary";
     const PAGE_SIZE = 12;
     const DEFAULT_EMPTY_MESSAGE = "현재 보관 중인 분실물이 없습니다.";
     const PUBLIC_LOST_ITEMS_COLLECTION = "public_lost_items";
@@ -1265,30 +1266,64 @@ const firebaseConfig = {
           seenPublicItemIds.clear();
           lastVisible = null;
           hasMorePublicItems = true;
+          publicItemsMode = "summary";
         }
-        const query = db.collection("public_lost_items")
-          .where("status", "in", ["stored", "보관 중"]);
-        const page = await NSMissingPagination.fetchPage(
-          query, lastVisible, PUBLIC_FETCH_PAGE_SIZE, firebase.firestore.FieldPath.documentId()
-        );
-        if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
-        page.docs.forEach((doc) => {
-          if (seenPublicItemIds.has(doc.id)) return;
-          seenPublicItemIds.add(doc.id);
-          const data = doc.data() || {};
-          items.push({
-            id: doc.id,
-            title: data.title || "",
-            category: data.category || "기타",
-            storageLocation: data.storageLocation || "",
-            foundPlace: data.foundPlace || "",
-            foundTime: normalizeTs(data.foundTime),
-            createdAt: normalizeTs(data.createdAt) || normalizeTs(data.foundTime),
-            imageDataUrl: data.imageDataUrl || "",
-            imageUrl: data.imageUrl || "",
-            status: "stored"
+        const addSnapshotItems = (snapshot, includesImage) => {
+          snapshot.docs.forEach((doc) => {
+            if (seenPublicItemIds.has(doc.id)) return;
+            seenPublicItemIds.add(doc.id);
+            const data = doc.data() || {};
+            items.push({
+              id: doc.id,
+              title: data.title || "",
+              category: data.category || "기타",
+              storageLocation: data.storageLocation || "",
+              foundPlace: data.foundPlace || "",
+              foundTime: normalizeTs(data.foundTime),
+              createdAt: normalizeTs(data.createdAt) || normalizeTs(data.foundTime),
+              imageDataUrl: includesImage ? (data.imageDataUrl || "") : "",
+              imageUrl: includesImage ? (data.imageUrl || "") : "",
+              status: "stored"
+            });
           });
-        });
+        };
+        let page;
+        try {
+          const collectionName = publicItemsMode === "summary"
+            ? PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION
+            : PUBLIC_LOST_ITEMS_COLLECTION;
+          const query = db.collection(collectionName)
+            .where("status", "in", ["stored", "보관 중"]);
+          page = await NSMissingPagination.fetchPage(
+            query, lastVisible, PUBLIC_FETCH_PAGE_SIZE, firebase.firestore.FieldPath.documentId()
+          );
+          if (isInitial && publicItemsMode === "summary" && page.docs.length === 0) {
+            // 분리 전 기존 데이터가 있는 경우에만 기존 문서로 한 번 호환 조회합니다.
+            publicItemsMode = "legacy";
+            items = [];
+            seenPublicItemIds.clear();
+            lastVisible = null;
+            const legacyQuery = db.collection(PUBLIC_LOST_ITEMS_COLLECTION)
+              .where("status", "in", ["stored", "보관 중"]);
+            page = await NSMissingPagination.fetchPage(
+              legacyQuery, null, PUBLIC_FETCH_PAGE_SIZE, firebase.firestore.FieldPath.documentId()
+            );
+          }
+        } catch (summaryErr) {
+          if (!isInitial || publicItemsMode === "legacy") throw summaryErr;
+          console.warn("분실물 요약 목록을 불러오지 못해 기존 목록으로 전환합니다.", summaryErr);
+          publicItemsMode = "legacy";
+          items = [];
+          seenPublicItemIds.clear();
+          lastVisible = null;
+          const legacyQuery = db.collection(PUBLIC_LOST_ITEMS_COLLECTION)
+            .where("status", "in", ["stored", "보관 중"]);
+          page = await NSMissingPagination.fetchPage(
+            legacyQuery, null, PUBLIC_FETCH_PAGE_SIZE, firebase.firestore.FieldPath.documentId()
+          );
+        }
+        if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
+        addSnapshotItems(page, publicItemsMode === "legacy");
         lastVisible = page.cursor;
         hasMorePublicItems = page.hasMore;
         items.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "") || a.id.localeCompare(b.id));

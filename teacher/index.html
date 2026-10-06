@@ -1514,30 +1514,270 @@ const firebaseConfig = {
         };
       }
 
-      async function updateLostItemAndPublic(itemId, updates) {
- const sessionOperation = captureAuthOperation();
- if (!sessionOperation) return;
+      function createPublicLostItemSummaryPayload(data) {
+        const publicData = createPublicLostItemPayload(data);
+        if (!publicData) return null;
+        const { imageDataUrl, imageUrl, ...summary } = publicData;
+        return summary;
+      }
 
+      function createPublicLostItemImagePayload(data) {
+        const publicData = createPublicLostItemPayload(data);
+        if (!publicData) return null;
+        return {
+          imageDataUrl: publicData.imageDataUrl || "",
+          imageUrl: publicData.imageUrl || "",
+          status: "stored"
+        };
+      }
+
+      function createManagementLostItemSummaryPayload(data) {
+        if (!data) return null;
+        return {
+          title: data.title || "",
+          category: data.category || "기타",
+          storageLocation: data.storageLocation || "",
+          foundPlace: data.foundPlace || "",
+          foundTime: data.foundTime || null,
+          finderName: data.finderName || "",
+          createdAt: data.createdAt || null,
+          imageExpiresAt: data.imageExpiresAt || null,
+          status: normalizeLostItemStatus(data.status),
+          ownerInfo: data.ownerInfo || "",
+          ...(data.statusUpdatedAt ? { statusUpdatedAt: data.statusUpdatedAt } : {}),
+          ...(data.deletedAt ? { deletedAt: data.deletedAt } : {}),
+          ...(data.deletedBy ? { deletedBy: data.deletedBy } : {}),
+          ...(data.restoredAt ? { restoredAt: data.restoredAt } : {}),
+          ...(data.restoredBy ? { restoredBy: data.restoredBy } : {})
+        };
+      }
+
+      function createManagementLostItemImagePayload(data) {
+        if (!data) return null;
+        return {
+          imageDataUrl: data.imageDataUrl || "",
+          imageUrl: data.imageUrl || "",
+          ...(data.imageDataUrl || data.imageUrl
+            ? { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }
+            : {})
+        };
+      }
+
+      async function loadStoredLostItemImage(itemId, sourceData) {
+        if (sourceData && (sourceData.imageDataUrl || sourceData.imageUrl)) return sourceData;
+        const imageSnapshot = await db.collection(LOST_ITEM_IMAGES_COLLECTION)
+          .doc(itemId)
+          .get()
+          .catch(() => null);
+        const imageData = imageSnapshot && imageSnapshot.exists ? imageSnapshot.data() || {} : {};
+        return {
+          ...(sourceData || {}),
+          imageDataUrl: imageData.imageDataUrl || "",
+          imageUrl: imageData.imageUrl || ""
+        };
+      }
+
+      async function syncManagementLostItem(itemId, data) {
+        let sourceData = data;
+        if (!sourceData) {
+          const sourceDoc = await db.collection("lost_items").doc(itemId).get();
+          if (!sourceDoc.exists) {
+            await deleteManagementLostItemData(itemId);
+            return;
+          }
+          sourceData = sourceDoc.data() || {};
+        }
+        const imageData = await loadStoredLostItemImage(itemId, sourceData);
+        await Promise.all([
+          db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId)
+            .set(createManagementLostItemSummaryPayload(sourceData)),
+          db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId)
+            .set(createManagementLostItemImagePayload(imageData))
+        ]);
+      }
+
+      async function deletePublicLostItemData(itemId) {
+        const refs = [
+          db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId),
+          db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId),
+          db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(itemId)
+        ];
+        await Promise.all(refs.map((ref) => ref.delete().catch((err) => {
+          if (err && err.code !== "not-found") throw err;
+        })));
+      }
+
+      async function deleteManagementLostItemData(itemId) {
+        await Promise.all([
+          db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId).delete().catch((err) => {
+            if (err && err.code !== "not-found") throw err;
+          }),
+          db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId).delete().catch((err) => {
+            if (err && err.code !== "not-found") throw err;
+          })
+        ]);
+      }
+
+      async function syncPublicLostItem(itemId, data) {
+        let sourceData = data;
+        if (!sourceData) {
+          const sourceDoc = await db.collection("lost_items").doc(itemId).get();
+          if (!sourceDoc.exists) {
+            await deletePublicLostItemData(itemId);
+            await deleteManagementLostItemData(itemId);
+            return;
+          }
+          sourceData = sourceDoc.data() || {};
+        }
+        const enrichedSourceData = await loadStoredLostItemImage(itemId, sourceData);
+        await syncManagementLostItem(itemId, enrichedSourceData);
+        const publicData = createPublicLostItemPayload(enrichedSourceData);
+        if (!publicData) {
+          await deletePublicLostItemData(itemId);
+          return;
+        }
+        await Promise.all([
+          db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId).set(publicData),
+          db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId)
+            .set(createPublicLostItemSummaryPayload(enrichedSourceData)),
+          db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(itemId)
+            .set(createPublicLostItemImagePayload(enrichedSourceData))
+        ]);
+      }
+
+      function getManagementItemImageSource(item) {
+        return item && (item.imageDataUrl || item.imageUrl) || "";
+      }
+
+      function applyManagementItemImage(img, imgWrap, item) {
+        if (!img || !imgWrap) return;
+        const source = getManagementItemImageSource(item);
+        if (!source) {
+          img.classList.remove("is-loaded");
+          imgWrap.classList.remove("is-loading");
+          imgWrap.classList.add("is-missing");
+          return;
+        }
+        imgWrap.classList.remove("is-missing");
+        imgWrap.classList.add("is-loading");
+        img.onload = () => {
+          img.classList.add("is-loaded");
+          imgWrap.classList.remove("is-loading");
+        };
+        img.onerror = () => {
+          img.classList.remove("is-loaded");
+          imgWrap.classList.remove("is-loading");
+          imgWrap.classList.add("is-missing");
+        };
+        img.src = source;
+      }
+
+      async function loadManagementItemImage(item) {
+        if (!item || getManagementItemImageSource(item)) return item;
+        if (itemImageRequests.has(item.id)) {
+          await itemImageRequests.get(item.id);
+          return item;
+        }
+        const request = (async () => {
+          let imageSnapshot = await db.collection(LOST_ITEM_IMAGES_COLLECTION)
+            .doc(item.id)
+            .get()
+            .catch(() => null);
+          let imageData = imageSnapshot && imageSnapshot.exists ? imageSnapshot.data() || {} : null;
+          if (!imageData || (!imageData.imageDataUrl && !imageData.imageUrl)) {
+            const legacySnapshot = await db.collection("lost_items")
+              .doc(item.id)
+              .get()
+              .catch(() => null);
+            imageData = legacySnapshot && legacySnapshot.exists ? legacySnapshot.data() || {} : {};
+          }
+          item.imageDataUrl = imageData.imageDataUrl || "";
+          item.imageUrl = imageData.imageUrl || "";
+        })().catch((err) => {
+          console.warn("교직원용 분실물 사진 불러오기 오류:", err);
+        });
+        itemImageRequests.set(item.id, request);
+        await request;
+        return item;
+      }
+
+      function observeManagementItemImage(img, imgWrap, item) {
+        const hydrate = async () => {
+          await loadManagementItemImage(item);
+          applyManagementItemImage(img, imgWrap, item);
+        };
+        if (getManagementItemImageSource(item)) {
+          applyManagementItemImage(img, imgWrap, item);
+          return;
+        }
+        if (itemImageObserver) {
+          img.__hydrateManagementItemImage = hydrate;
+          itemImageObserver.observe(img);
+        } else {
+          hydrate();
+        }
+      }
+
+      async function migrateLegacyManagementItem(doc) {
+        const data = doc.data() || {};
+        const hadLegacyImage = !!(data.imageDataUrl || data.imageUrl);
+        await syncPublicLostItem(doc.id, data);
+        if (hadLegacyImage) {
+          await doc.ref.update({
+            imageDataUrl: firebase.firestore.FieldValue.delete(),
+            imageUrl: firebase.firestore.FieldValue.delete()
+          });
+        }
+      }
+
+      async function updateLostItemAndPublic(itemId, updates) {
+        const sessionOperation = captureAuthOperation();
+        if (!sessionOperation) return;
         const sourceRef = db.collection("lost_items").doc(itemId);
         const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId);
+        const publicSummaryRef = db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId);
+        const publicImageRef = db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(itemId);
+        const managementSummaryRef = db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId);
+        const managementImageRef = db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId);
         await waitForAuthOperation(db.runTransaction(async (transaction) => {
           const sourceDoc = await transaction.get(sourceRef);
           if (!sourceDoc.exists) throw new Error("분실물 정보가 이미 삭제되었습니다.");
-          const nextData = { ...(sourceDoc.data() || {}), ...updates };
+          const sourceData = sourceDoc.data() || {};
+          let imageData = sourceData;
+          if (!sourceData.imageDataUrl && !sourceData.imageUrl) {
+            const imageDoc = await transaction.get(managementImageRef);
+            imageData = {
+              ...sourceData,
+              ...((imageDoc.exists) ? imageDoc.data() || {} : {})
+            };
+          }
+          const nextData = { ...sourceData, ...updates };
           transaction.update(sourceRef, updates);
+          transaction.set(managementSummaryRef, createManagementLostItemSummaryPayload(nextData));
+          transaction.set(managementImageRef, createManagementLostItemImagePayload(imageData));
           const publicData = createPublicLostItemPayload(nextData);
-          if (publicData) transaction.set(publicRef, publicData);
-          else transaction.delete(publicRef);
+          if (publicData) {
+            transaction.set(publicRef, publicData);
+            transaction.set(publicSummaryRef, createPublicLostItemSummaryPayload(nextData));
+            transaction.set(publicImageRef, createPublicLostItemImagePayload(imageData));
+          } else {
+            transaction.delete(publicRef);
+            transaction.delete(publicSummaryRef);
+            transaction.delete(publicImageRef);
+          }
         }), sessionOperation);
       }
 
       async function deleteLostItemAndPublic(itemId) {
- const sessionOperation = captureAuthOperation();
- if (!sessionOperation) return;
-
+        const sessionOperation = captureAuthOperation();
+        if (!sessionOperation) return;
         const batch = db.batch();
         batch.delete(db.collection("lost_items").doc(itemId));
         batch.delete(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(itemId));
+        batch.delete(db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId));
+        batch.delete(db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(itemId));
+        batch.delete(db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(itemId));
+        batch.delete(db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(itemId));
         await waitForAuthOperation(batch.commit(), sessionOperation);
       }
 
@@ -1771,6 +2011,7 @@ const firebaseConfig = {
       const DEFAULT_EMPTY_MESSAGE = "아직 등록된 분실물이 없습니다. 교직원이 분실물을 등록하면 이곳에 표시됩니다.";
       let itemImageObserver = null;
       const itemImageRequests = new Map();
+      let managementItemsMode = "summary";
 
       function isStandaloneApp() {
         return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -3244,26 +3485,58 @@ const firebaseConfig = {
         isLoading = true;
         const requestToken = NSMissingPagination.beginRequest();
         const statusGroup = statusGroupForCategory(currentCategory);
+        const itemLimit = statusGroup === "stored"
+          ? MAX_STORED_REGISTRATION_ITEMS
+          : MANAGEMENT_FETCH_PAGE_SIZE;
         if (!append) {
           lastVisible = null;
           hasMoreManagementItems = true;
           items = [];
           selectedIds.clear();
           loadedStatusGroup = statusGroup;
+          managementItemsMode = "summary";
         }
         if (emptyMessage) {
           emptyMessage.textContent = "분실물 목록을 불러오는 중입니다.";
           emptyMessage.style.display = "block";
         }
         try {
-          const query = db.collection("lost_items")
-            .where("status", "in", statusStorageValues(statusGroup));
-          const page = await waitForAuthOperation(NSMissingPagination.fetchPage(
-            query, append ? lastVisible : null, MANAGEMENT_FETCH_PAGE_SIZE,
-            firebase.firestore.FieldPath.documentId()
-          ), sessionOperation);
+          let page;
+          let usedLegacy = managementItemsMode === "legacy";
+          const fetchLegacyPage = () => {
+            const query = db.collection("lost_items")
+              .where("status", "in", statusStorageValues(statusGroup));
+            return waitForAuthOperation(NSMissingPagination.fetchPage(
+              query, append ? lastVisible : null, itemLimit,
+              firebase.firestore.FieldPath.documentId()
+            ), sessionOperation);
+          };
+          if (usedLegacy) {
+            page = await fetchLegacyPage();
+          } else {
+            try {
+              const summaryQuery = db.collection(LOST_ITEM_SUMMARIES_COLLECTION)
+                .where("status", "in", statusStorageValues(statusGroup));
+              page = await waitForAuthOperation(NSMissingPagination.fetchPage(
+                summaryQuery, append ? lastVisible : null, itemLimit,
+                firebase.firestore.FieldPath.documentId()
+              ), sessionOperation);
+              if (!append && page.docs.length === 0) {
+                usedLegacy = true;
+                managementItemsMode = "legacy";
+                lastVisible = null;
+                page = await fetchLegacyPage();
+              }
+            } catch (summaryErr) {
+              if (append) throw summaryErr;
+              console.warn("분실물 요약 목록을 불러오지 못해 기존 목록으로 전환합니다.", summaryErr);
+              usedLegacy = true;
+              managementItemsMode = "legacy";
+              lastVisible = null;
+              page = await fetchLegacyPage();
+            }
+          }
           if (!NSMissingPagination.isCurrentRequest(requestToken)) return;
-          const snapshot = { docs: page.docs, empty: page.docs.length === 0 };
           lastVisible = page.cursor;
           hasMoreManagementItems = page.hasMore;
           if (isInitial) displayCount = FIRST_PAGE_SIZE;
@@ -3318,26 +3591,7 @@ const firebaseConfig = {
             });
           };
 
-          let summaryReadSucceeded = false;
-          try {
-            const summarySnapshot = await db.collection(LOST_ITEM_SUMMARIES_COLLECTION)
-              .where("status", "in", statusStorageValues(statusGroup))
-              .limit(itemLimit)
-              .get();
-            addSnapshotItems(summarySnapshot);
-            summaryReadSucceeded = true;
-          } catch (summaryErr) {
-            console.warn("분실물 요약 목록을 불러오지 못해 기존 목록으로 전환합니다.", summaryErr);
-          }
-
-          // 분리 문서가 아직 없는 이전 데이터만 원본 문서를 읽어 호환한다.
-          if (!summaryReadSucceeded || items.length < itemLimit) {
-            const legacySnapshot = await db.collection("lost_items")
-              .where("status", "in", statusStorageValues(statusGroup))
-              .limit(itemLimit)
-              .get();
-            addSnapshotItems(legacySnapshot, true);
-          }
+          addSnapshotItems(page, usedLegacy);
 
           // 오래된 항목은 바로 삭제하지 않고 휴지통으로 이동
           if (toTrash.length) {

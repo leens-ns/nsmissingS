@@ -1097,32 +1097,88 @@
     }
 
     async function syncPublicLostItems() {
- const sessionOperation = captureAuthOperation();
- if (!sessionOperation) return;
-
+      const sessionOperation = captureAuthOperation();
+      if (!sessionOperation) return;
       if (!isAdmin || !currentUser) throw new Error("관리자 로그인 후 사용할 수 있습니다.");
-      const sourceSnapshot = await waitForAuthOperation(db.collection("lost_items").get(), sessionOperation);
-      const publicSnapshot = await waitForAuthOperation(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).get(), sessionOperation);
-      const ids = new Set([...sourceSnapshot.docs, ...publicSnapshot.docs].map(item => item.id));
-      let synced = 0, removed = 0, normalized = 0;
+      const collections = [
+        "lost_items",
+        PUBLIC_LOST_ITEMS_COLLECTION,
+        PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION,
+        PUBLIC_LOST_ITEM_IMAGES_COLLECTION,
+        LOST_ITEM_SUMMARIES_COLLECTION,
+        LOST_ITEM_IMAGES_COLLECTION
+      ];
+      const snapshots = await Promise.all(collections.map((name) =>
+        waitForAuthOperation(db.collection(name).get(), sessionOperation)
+      ));
+      const sourceSnapshot = snapshots[0];
+      const sourceIds = new Set(sourceSnapshot.docs.map((doc) => doc.id));
+      const ids = new Set(snapshots.flatMap((snapshot) => snapshot.docs.map((doc) => doc.id)));
+      let synced = 0;
+      let removed = 0;
+      let normalized = 0;
+      let migrated = 0;
       for (const id of ids) {
         const sourceRef = db.collection("lost_items").doc(id);
         const publicRef = db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id);
-        const result = await waitForAuthOperation(db.runTransaction(async transaction => {
+        const publicSummaryRef = db.collection(PUBLIC_LOST_ITEM_SUMMARIES_COLLECTION).doc(id);
+        const publicImageRef = db.collection(PUBLIC_LOST_ITEM_IMAGES_COLLECTION).doc(id);
+        const managementSummaryRef = db.collection(LOST_ITEM_SUMMARIES_COLLECTION).doc(id);
+        const managementImageRef = db.collection(LOST_ITEM_IMAGES_COLLECTION).doc(id);
+        const result = await waitForAuthOperation(db.runTransaction(async (transaction) => {
           const current = await transaction.get(sourceRef);
-          if (!current.exists) { transaction.delete(publicRef); return {removed:1}; }
-          const data = current.data() || {}, updates = {};
+          if (!current.exists) {
+            [publicRef, publicSummaryRef, publicImageRef, managementSummaryRef, managementImageRef]
+              .forEach((ref) => transaction.delete(ref));
+            return { removed: 1 };
+          }
+          const data = current.data() || {};
+          const updates = {};
           const status = normalizeLostItemStatus(data.status);
           if (data.status !== status) updates.status = status;
           if (!data.createdAt && data.foundTime) updates.createdAt = data.foundTime;
+          const hasLegacyImage = !!(data.imageDataUrl || data.imageUrl);
+          let imageData = data;
+          const nextData = { ...data, ...updates };
+          if (hasLegacyImage) {
+            updates.imageDataUrl = firebase.firestore.FieldValue.delete();
+            updates.imageUrl = firebase.firestore.FieldValue.delete();
+          }
+          let existingImage = null;
+          if (!hasLegacyImage) {
+            const imageDoc = await transaction.get(managementImageRef);
+            existingImage = imageDoc.exists ? imageDoc.data() || {} : null;
+            imageData = { ...data, ...(existingImage || {}) };
+          }
           if (Object.keys(updates).length) transaction.update(sourceRef, updates);
-          const projection = createPublicLostItemPayload({...data, ...updates});
-          if (projection) transaction.set(publicRef, projection); else transaction.delete(publicRef);
-          return {synced:projection ? 1 : 0, normalized:Object.keys(updates).length ? 1 : 0};
+          const projection = createPublicLostItemPayload(nextData);
+          transaction.set(managementSummaryRef, createManagementLostItemSummaryPayload(nextData));
+          if (hasLegacyImage) {
+            transaction.set(managementImageRef, createManagementLostItemImagePayload(nextData));
+          }
+          if (projection) {
+            transaction.set(publicRef, projection);
+            transaction.set(publicSummaryRef, createPublicLostItemSummaryPayload(nextData));
+            transaction.set(publicImageRef, createPublicLostItemImagePayload(imageData));
+          } else {
+            transaction.delete(publicRef);
+            transaction.delete(publicSummaryRef);
+            transaction.delete(publicImageRef);
+          }
+          return {
+            synced: projection ? 1 : 0,
+            removed: 0,
+            normalized: data.status !== status || (!data.createdAt && data.foundTime) ? 1 : 0,
+            migrated: hasLegacyImage ? 1 : 0,
+            keptImage: !hasLegacyImage && !!existingImage
+          };
         }), sessionOperation);
-        synced += result.synced || 0; removed += result.removed || 0; normalized += result.normalized || 0;
+        synced += result.synced || 0;
+        removed += result.removed || 0;
+        normalized += result.normalized || 0;
+        migrated += result.migrated || 0;
       }
-      return {total:sourceSnapshot.size, synced, removed, normalized};
+      return { total: sourceSnapshot.size, synced, removed, normalized, migrated };
     }
     async function getAuthorizedUser(email) {
  const sessionOperation = captureAuthOperation();
@@ -1490,6 +1546,8 @@
             batch.delete(db.collection("lost_items").doc(id));
             batch.delete(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id));
             await waitForAuthOperation(batch.commit(), sessionOperation);
+            await deletePublicLostItemData(id);
+            await deleteManagementLostItemData(id);
           }
           alert(targetIds.length + "개 분실물을 영구 삭제했습니다.");
         } else {
@@ -1502,6 +1560,8 @@
             });
             batch.delete(db.collection(PUBLIC_LOST_ITEMS_COLLECTION).doc(id));
             await waitForAuthOperation(batch.commit(), sessionOperation);
+            await deletePublicLostItemData(id);
+            await syncManagementLostItem(id);
           }
           alert(targetIds.length + "개 분실물을 휴지통으로 이동했습니다.");
         }
